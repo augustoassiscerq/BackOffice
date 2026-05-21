@@ -122,8 +122,11 @@
         </div>
 
         <!-- Composição de Renda — 3 Meses -->
-        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-          <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Composição de Renda — 3 Meses</h2>
+        <div id="renda-card" class="bg-white rounded-xl border-2 border-gray-200 shadow-sm p-5 transition-all">
+          <div class="flex items-center justify-between mb-4">
+            <h2 id="renda-titulo" class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Composição de Renda — 3 Meses</h2>
+            <span id="renda-obrig-badge" class="hidden text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">Obrigatório</span>
+          </div>
           <div class="grid grid-cols-3 gap-4">
 
             <!-- MÊS 1 -->
@@ -261,6 +264,15 @@
             <button id="btn-salvar" onclick="salvar()"
               class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg text-sm transition-colors"
               disabled>💾 Salvar Consulta</button>
+
+            <!-- Checkbox comprovação de renda -->
+            <label class="flex items-center gap-2 cursor-pointer select-none pt-1">
+              <input type="checkbox" id="req-renda" checked
+                onchange="atualizarReqRenda(); verificarSalvar()"
+                class="w-4 h-4 rounded accent-green-600 cursor-pointer">
+              <span class="text-xs text-gray-600 font-medium">Necessário a comprovação de renda?</span>
+            </label>
+
             <p id="msg-ok"  class="hidden text-center text-xs text-green-700 bg-green-50 rounded-lg py-2 font-medium"></p>
             <p id="msg-err" class="hidden text-center text-xs text-red-600  bg-red-50  rounded-lg py-2"></p>
           </div>
@@ -337,6 +349,7 @@
       ['mes1', 'mes2', 'mes3'].forEach(m => {
         for (let i = 0; i < 10; i++) addRow(m);
       });
+      atualizarReqRenda(); // aplica borda vermelha inicial (checkbox marcado por padrão)
     });
 
     // ── Múltiplas contas de energia ───────────────────────────────
@@ -526,6 +539,7 @@
         ? 'font-semibold text-green-700'
         : 'font-semibold text-gray-400';
       calcularRendaResumo();
+      verificarSalvar();
     }
 
     function calcularRendaResumo() {
@@ -680,11 +694,30 @@
 
     // ── Verificar botão Salvar ────────────────────────────────────
     function verificarSalvar() {
+      const reqRenda = document.getElementById('req-renda').checked;
+      const temRenda = getTotalMes('mes1') > 0 || getTotalMes('mes2') > 0 || getTotalMes('mes3') > 0;
       const ok =
         document.getElementById('id_contrato').value.trim() &&
         document.getElementById('analista').value.trim() &&
-        resultado !== null;
+        resultado !== null &&
+        (!reqRenda || temRenda);
       document.getElementById('btn-salvar').disabled = !ok;
+    }
+
+    // ── Destacar seção de renda como obrigatória ──────────────────
+    function atualizarReqRenda() {
+      const req   = document.getElementById('req-renda').checked;
+      const card  = document.getElementById('renda-card');
+      const badge = document.getElementById('renda-obrig-badge');
+      if (req) {
+        card.classList.add('border-red-300');
+        card.classList.remove('border-gray-200');
+        badge.classList.remove('hidden');
+      } else {
+        card.classList.remove('border-red-300');
+        card.classList.add('border-gray-200');
+        badge.classList.add('hidden');
+      }
     }
 
     function toggleCash() {
