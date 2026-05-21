@@ -178,6 +178,10 @@
             </div>
             <span id="renda_badge" class="px-3 py-1 rounded-full text-xs font-bold"></span>
           </div>
+          <!-- Aviso de substituição automática de renda -->
+          <div id="renda-subst-aviso" class="hidden mt-2 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            ℹ️ Renda atualizada de <strong id="subst-anterior"></strong> para <strong id="subst-nova"></strong> — média comprovada superior à declarada.
+          </div>
         </div>
 
         <!-- Casos CASH (colapsável) -->
@@ -542,30 +546,82 @@
       verificarSalvar();
     }
 
+    // ── Estado visual do card de renda ───────────────────────────
+    let _substituindoRenda = false;
+
+    function atualizarEstadoRendaCard(estado) {
+      const card  = document.getElementById('renda-card');
+      const badge = document.getElementById('renda-obrig-badge');
+      card.classList.remove('border-gray-200', 'border-red-300', 'border-green-400');
+      if (estado === 'inativo') {
+        card.classList.add('border-gray-200');
+        badge.classList.add('hidden');
+      } else if (estado === 'pendente' || estado === 'insuficiente') {
+        card.classList.add('border-red-300');
+        badge.textContent = estado === 'pendente' ? 'Obrigatório' : '✗ Insuficiente';
+        badge.className   = 'text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium';
+        badge.classList.remove('hidden');
+      } else if (estado === 'aprovado') {
+        card.classList.add('border-green-400');
+        badge.textContent = '✓ Comprovado';
+        badge.className   = 'text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium';
+        badge.classList.remove('hidden');
+      }
+    }
+
+    function mostrarAvisoSubst(nova, anterior) {
+      document.getElementById('subst-anterior').textContent = brl(anterior);
+      document.getElementById('subst-nova').textContent     = brl(nova);
+      document.getElementById('renda-subst-aviso').classList.remove('hidden');
+    }
+
+    function ocultarAvisoSubst() {
+      document.getElementById('renda-subst-aviso').classList.add('hidden');
+    }
+
     function calcularRendaResumo() {
       const t1 = getTotalMes('mes1');
       const t2 = getTotalMes('mes2');
       const t3 = getTotalMes('mes3');
       const total = t1 + t2 + t3;
       const resumo = document.getElementById('renda-resumo');
+      const req    = document.getElementById('req-renda').checked;
 
-      if (!total) { resumo.classList.add('hidden'); return; }
+      if (!total) {
+        resumo.classList.add('hidden');
+        ocultarAvisoSubst();
+        atualizarEstadoRendaCard(req ? 'pendente' : 'inativo');
+        verificarSalvar();
+        return;
+      }
 
-      const media = total / 3;
-      const meta  = resultado?.renda_alvo || 0;
+      const media          = total / 3;
+      const meta           = resultado?.renda_alvo || 0;
+      const rendaDeclarada = num('renda');
+
+      // Auto-substituir renda quando média comprovada > renda declarada
+      if (!_substituindoRenda && rendaDeclarada > 0 && media > rendaDeclarada) {
+        _substituindoRenda = true;
+        document.getElementById('renda').value = media.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2, maximumFractionDigits: 2
+        });
+        mostrarAvisoSubst(media, rendaDeclarada);
+        calcular(); // recalcula tudo com a nova renda (não entra em loop pois agora media == renda)
+        _substituindoRenda = false;
+        return;
+      }
 
       resumo.classList.remove('hidden');
       document.getElementById('renda_media').textContent    = brl(media);
       document.getElementById('renda_meta_txt').textContent = meta > 0 ? brl(meta) : '—';
 
-      const badge = document.getElementById('renda_badge');
-      if (meta > 0) {
-        const ok = media >= meta;
-        badge.textContent = ok ? '✓ Aprovado' : '✗ Pendenciar';
-        badge.className   = `px-3 py-1 rounded-full text-xs font-bold ${ok ? 'badge-aprovar' : 'badge-pendenciar'}`;
-      } else {
-        badge.textContent = '';
-      }
+      const aprovado = meta <= 0 || media >= meta;
+      const badge    = document.getElementById('renda_badge');
+      badge.textContent = meta > 0 ? (aprovado ? '✓ Aprovado' : '✗ Insuficiente') : '';
+      badge.className   = `px-3 py-1 rounded-full text-xs font-bold ${aprovado ? 'badge-aprovar' : 'badge-pendenciar'}`;
+
+      atualizarEstadoRendaCard(req ? (aprovado ? 'aprovado' : 'insuficiente') : 'inativo');
+      verificarSalvar();
     }
 
     // ── Calculadora principal ─────────────────────────────────────
@@ -695,29 +751,24 @@
     // ── Verificar botão Salvar ────────────────────────────────────
     function verificarSalvar() {
       const reqRenda = document.getElementById('req-renda').checked;
-      const temRenda = getTotalMes('mes1') > 0 || getTotalMes('mes2') > 0 || getTotalMes('mes3') > 0;
+      const t1 = getTotalMes('mes1'), t2 = getTotalMes('mes2'), t3 = getTotalMes('mes3');
+      const total    = t1 + t2 + t3;
+      const temRenda = total > 0;
+      const media    = temRenda ? total / 3 : 0;
+      const meta     = resultado?.renda_alvo || 0;
+      // renda ok se: não é obrigatório, OU (tem valores E (sem meta definida OU média >= meta))
+      const rendaOk  = !reqRenda || (temRenda && (meta <= 0 || media >= meta));
       const ok =
         document.getElementById('id_contrato').value.trim() &&
         document.getElementById('analista').value.trim() &&
         resultado !== null &&
-        (!reqRenda || temRenda);
+        rendaOk;
       document.getElementById('btn-salvar').disabled = !ok;
     }
 
-    // ── Destacar seção de renda como obrigatória ──────────────────
+    // ── Atualizar estado do card de renda ao mudar checkbox ──────
     function atualizarReqRenda() {
-      const req   = document.getElementById('req-renda').checked;
-      const card  = document.getElementById('renda-card');
-      const badge = document.getElementById('renda-obrig-badge');
-      if (req) {
-        card.classList.add('border-red-300');
-        card.classList.remove('border-gray-200');
-        badge.classList.remove('hidden');
-      } else {
-        card.classList.remove('border-red-300');
-        card.classList.add('border-gray-200');
-        badge.classList.add('hidden');
-      }
+      calcularRendaResumo(); // toda a lógica de estado já está lá
     }
 
     function toggleCash() {
