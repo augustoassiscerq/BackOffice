@@ -123,9 +123,29 @@
 
         <!-- Composição de Renda — 3 Meses -->
         <div id="renda-card" class="bg-white rounded-xl border-2 border-gray-200 shadow-sm p-5 transition-all">
-          <div class="flex items-center justify-between mb-4">
-            <h2 id="renda-titulo" class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Composição de Renda — 3 Meses</h2>
+
+          <!-- Título + badge -->
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Composição de Renda — 3 Meses</h2>
             <span id="renda-obrig-badge" class="hidden text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">Obrigatório</span>
+          </div>
+
+          <!-- Renda Alvo (plataforma) + Média dos 3 meses -->
+          <div class="flex items-end gap-4 mb-4 pb-4 border-b border-gray-100">
+            <div class="flex-1">
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Renda Alvo da Plataforma (R$)
+                <span class="text-gray-400 font-normal">— informe o valor mínimo exigido</span>
+              </label>
+              <input id="renda_alvo_meta" type="text" placeholder="0,00"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
+                oninput="maskBRL(this); calcularRendaResumo(); verificarSalvar()"
+                onpaste="pasteBRL(event, this)">
+            </div>
+            <div class="text-right flex-shrink-0">
+              <p class="text-xs font-medium text-gray-500 mb-1">Média dos 3 meses</p>
+              <p id="header-media" class="text-xl font-bold text-gray-300">R$ 0,00</p>
+            </div>
           </div>
           <div class="grid grid-cols-3 gap-4">
 
@@ -583,9 +603,19 @@
       const t1 = getTotalMes('mes1');
       const t2 = getTotalMes('mes2');
       const t3 = getTotalMes('mes3');
-      const total = t1 + t2 + t3;
+      const total  = t1 + t2 + t3;
+      const media  = total > 0 ? total / 3 : 0;
       const resumo = document.getElementById('renda-resumo');
       const req    = document.getElementById('req-renda').checked;
+
+      // Atualiza display da média no cabeçalho sempre
+      const headerMedia = document.getElementById('header-media');
+      headerMedia.textContent = brl(media);
+      headerMedia.className   = `text-xl font-bold ${media > 0 ? 'text-gray-900' : 'text-gray-300'}`;
+
+      // Meta: usa o campo da plataforma se preenchido, senão a calculada
+      const metaPlataforma = parseBRL(document.getElementById('renda_alvo_meta').value);
+      const meta = metaPlataforma > 0 ? metaPlataforma : (resultado?.renda_alvo || 0);
 
       if (!total) {
         resumo.classList.add('hidden');
@@ -595,8 +625,6 @@
         return;
       }
 
-      const media          = total / 3;
-      const meta           = resultado?.renda_alvo || 0;
       const rendaDeclarada = num('renda');
 
       // Auto-substituir renda quando média comprovada > renda declarada
@@ -606,7 +634,7 @@
           minimumFractionDigits: 2, maximumFractionDigits: 2
         });
         mostrarAvisoSubst(media, rendaDeclarada);
-        calcular(); // recalcula tudo com a nova renda (não entra em loop pois agora media == renda)
+        calcular(); // recalcula tudo com a nova renda (não entra em loop pois media == nova renda)
         _substituindoRenda = false;
         return;
       }
@@ -755,7 +783,9 @@
       const total    = t1 + t2 + t3;
       const temRenda = total > 0;
       const media    = temRenda ? total / 3 : 0;
-      const meta     = resultado?.renda_alvo || 0;
+      // Meta: campo da plataforma tem prioridade; senão usa a calculada
+      const metaPlataforma = parseBRL(document.getElementById('renda_alvo_meta')?.value || '');
+      const meta = metaPlataforma > 0 ? metaPlataforma : (resultado?.renda_alvo || 0);
       // renda ok se: não é obrigatório, OU (tem valores E (sem meta definida OU média >= meta))
       const rendaOk  = !reqRenda || (temRenda && (meta <= 0 || media >= meta));
       const ok =
