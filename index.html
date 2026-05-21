@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calculadora de Renda — Solagora</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
   <style>
     .tab-ativo          { border-bottom: 3px solid #16a34a; color: #16a34a; font-weight: 700; }
     .badge-aprovar      { background: #dcfce7; color: #15803d; }
@@ -232,20 +232,11 @@
             <!-- Resultado Principal -->
             <div>
               <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Resultado Principal</p>
-              <div class="space-y-2">
-                <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                  <span class="text-xs text-gray-600">Resultado 5%</span>
-                  <div class="flex items-center gap-2">
-                    <span id="v_5c" class="text-xs font-mono font-semibold"></span>
-                    <span id="b_5c" class="px-2 py-0.5 rounded-full text-xs font-bold"></span>
-                  </div>
-                </div>
-                <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                  <span class="text-xs text-gray-600">Resultado 10%</span>
-                  <div class="flex items-center gap-2">
-                    <span id="v_10c" class="text-xs font-mono font-semibold"></span>
-                    <span id="b_10c" class="px-2 py-0.5 rounded-full text-xs font-bold"></span>
-                  </div>
+              <div class="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                <span class="text-xs text-gray-600">Resultado 5%</span>
+                <div class="flex items-center gap-2">
+                  <span id="v_5c" class="text-xs font-mono font-semibold"></span>
+                  <span id="b_5c" class="px-2 py-0.5 rounded-full text-xs font-bold"></span>
                 </div>
               </div>
             </div>
@@ -256,20 +247,11 @@
                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Resultado por Pico</p>
                 <span id="taxa_kwh" class="text-xs text-blue-600 font-mono"></span>
               </div>
-              <div class="space-y-2">
-                <div class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-2">
-                  <span class="text-xs text-gray-600">Resultado 5%</span>
-                  <div class="flex items-center gap-2">
-                    <span id="v_5p" class="text-xs font-mono font-semibold"></span>
-                    <span id="b_5p" class="px-2 py-0.5 rounded-full text-xs font-bold"></span>
-                  </div>
-                </div>
-                <div class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-2">
-                  <span class="text-xs text-gray-600">Resultado 10%</span>
-                  <div class="flex items-center gap-2">
-                    <span id="v_10p" class="text-xs font-mono font-semibold"></span>
-                    <span id="b_10p" class="px-2 py-0.5 rounded-full text-xs font-bold"></span>
-                  </div>
+              <div class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-2">
+                <span class="text-xs text-gray-600">Resultado 5%</span>
+                <div class="flex items-center gap-2">
+                  <span id="v_5p" class="text-xs font-mono font-semibold"></span>
+                  <span id="b_5p" class="px-2 py-0.5 rounded-full text-xs font-bold"></span>
                 </div>
               </div>
             </div>
@@ -336,9 +318,7 @@
               <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Parcela</th>
               <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Renda</th>
               <th class="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">5% Conta</th>
-              <th class="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">10% Conta</th>
               <th class="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">5% Pico</th>
-              <th class="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">10% Pico</th>
               <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Renda Alvo</th>
               <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Média Mensal</th>
             </tr>
@@ -362,7 +342,9 @@
 
     // ── Inicialização ────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', () => {
-      ['mes1', 'mes2', 'mes3'].forEach(m => addRow(m));
+      ['mes1', 'mes2', 'mes3'].forEach(m => {
+        for (let i = 0; i < 10; i++) addRow(m);
+      });
     });
 
     // ── Navegação ─────────────────────────────────────────────────
@@ -504,18 +486,15 @@
         return;
       }
 
-      const r5c  = (conta + renda * 0.05) - parcela;
-      const r10c = (conta + renda * 0.10) - parcela;
+      const r5c = (conta + renda * 0.05) - parcela;
 
       document.getElementById('resultado-placeholder').classList.add('hidden');
       document.getElementById('resultado-panel').classList.remove('hidden');
 
-      setValor('v_5c',  'b_5c',  r5c,  false);
-      setValor('v_10c', 'b_10c', r10c, false);
+      setValor('v_5c', 'b_5c', r5c, false);
 
-      // Destaca seção de pico se não aprovado em nenhum critério
-      const aprovouPrincipal = r5c >= 0 || r10c >= 0;
-      destacarPico(!aprovouPrincipal);
+      // Destaca seção de pico se não aprovado
+      destacarPico(r5c < 0);
 
       const comprometimento = parcela - conta;
       const rendaAlvo       = comprometimento > 0 ? comprometimento / 0.05 : 0;
@@ -525,10 +504,8 @@
       document.getElementById('comprometimento').textContent = brl(comprometimento);
 
       resultado = {
-        res_5pct_conta:     r5c,
-        res_10pct_conta:    r10c,
-        status_5pct_conta:  r5c  >= 0 ? 'Aprovar' : 'Pendenciar',
-        status_10pct_conta: r10c >= 0 ? 'Aprovar' : 'Pendenciar',
+        res_5pct_conta:    r5c,
+        status_5pct_conta: r5c >= 0 ? 'Aprovar' : 'Pendenciar',
         comprometimento,
         renda_alvo: rendaAlvo
       };
@@ -556,23 +533,19 @@
 
       const taxa      = conta / consumo;
       const custoPico = pico * taxa;
-      const r5p       = (custoPico + renda * 0.05) - parcela;
-      const r10p      = (custoPico + renda * 0.10) - parcela;
+      const r5p = (custoPico + renda * 0.05) - parcela;
 
       secao.classList.remove('hidden');
       document.getElementById('taxa_kwh').textContent =
         `Taxa: R$ ${taxa.toFixed(4).replace('.', ',')} / kWh`;
 
-      setValor('v_5p',  'b_5p',  r5p,  true);
-      setValor('v_10p', 'b_10p', r10p, true);
+      setValor('v_5p', 'b_5p', r5p, true);
 
       resultadoPico = {
-        taxa_kwh:         taxa,
-        custo_pico:       custoPico,
-        res_5pct_pico:    r5p,
-        res_10pct_pico:   r10p,
-        status_5pct_pico:  r5p  >= 0 ? 'Aprovado por Pico' : 'Pendenciar',
-        status_10pct_pico: r10p >= 0 ? 'Aprovado por Pico' : 'Pendenciar'
+        taxa_kwh:        taxa,
+        custo_pico:      custoPico,
+        res_5pct_pico:   r5p,
+        status_5pct_pico: r5p >= 0 ? 'Aprovado por Pico' : 'Pendenciar'
       };
     }
 
@@ -634,60 +607,60 @@
     async function salvar() {
       if (!marcarErros()) return;
 
-      const btn = document.getElementById('btn-salvar');
+      const btn   = document.getElementById('btn-salvar');
+      const msgOk  = document.getElementById('msg-ok');
+      const msgErr = document.getElementById('msg-err');
+
       btn.disabled    = true;
       btn.textContent = '⏳ Salvando...';
-      document.getElementById('msg-ok').classList.add('hidden');
-      document.getElementById('msg-err').classList.add('hidden');
+      msgOk.classList.add('hidden');
+      msgErr.classList.add('hidden');
 
-      const t1 = getTotalMes('mes1');
-      const t2 = getTotalMes('mes2');
-      const t3 = getTotalMes('mes3');
-      const totalMeses = t1 + t2 + t3;
+      try {
+        const t1 = getTotalMes('mes1');
+        const t2 = getTotalMes('mes2');
+        const t3 = getTotalMes('mes3');
+        const totalMeses = t1 + t2 + t3;
 
-      const payload = {
-        id_contrato:      document.getElementById('id_contrato').value.trim(),
-        analista:         document.getElementById('analista').value.trim(),
-        conta_energia:    num('conta_energia'),
-        parcela:          num('parcela'),
-        renda:            num('renda'),
-        consumo_kwh:      parseFloat(document.getElementById('consumo_kwh').value) || null,
-        pico_kwh:         parseFloat(document.getElementById('pico_kwh').value)    || null,
-        renda_individual: parseBRL(document.getElementById('renda_individual').value) || null,
-        renda_presumida:  parseBRL(document.getElementById('renda_presumida').value)  || null,
-        // resultado principal
-        res_5pct_conta:     resultado.res_5pct_conta,
-        res_10pct_conta:    resultado.res_10pct_conta,
-        status_5pct_conta:  resultado.status_5pct_conta,
-        status_10pct_conta: resultado.status_10pct_conta,
-        comprometimento:    resultado.comprometimento,
-        renda_alvo:         resultado.renda_alvo,
-        // resultado pico (opcional)
-        taxa_kwh:           resultadoPico?.taxa_kwh       || null,
-        custo_pico:         resultadoPico?.custo_pico     || null,
-        res_5pct_pico:      resultadoPico?.res_5pct_pico  || null,
-        res_10pct_pico:     resultadoPico?.res_10pct_pico || null,
-        status_5pct_pico:   resultadoPico?.status_5pct_pico  || null,
-        status_10pct_pico:  resultadoPico?.status_10pct_pico || null,
-        // composição de renda
-        renda_mes1:         t1 || null,
-        renda_mes2:         t2 || null,
-        renda_mes3:         t3 || null,
-        renda_media_mensal: totalMeses ? totalMeses / 3 : null
-      };
+        const payload = {
+          id_contrato:      document.getElementById('id_contrato').value.trim(),
+          analista:         document.getElementById('analista').value.trim(),
+          conta_energia:    num('conta_energia'),
+          parcela:          num('parcela'),
+          renda:            num('renda'),
+          consumo_kwh:      parseFloat(document.getElementById('consumo_kwh').value) || null,
+          pico_kwh:         parseFloat(document.getElementById('pico_kwh').value)    || null,
+          renda_individual: parseBRL(document.getElementById('renda_individual').value) || null,
+          renda_presumida:  parseBRL(document.getElementById('renda_presumida').value)  || null,
+          res_5pct_conta:   resultado.res_5pct_conta,
+          status_5pct_conta: resultado.status_5pct_conta,
+          comprometimento:  resultado.comprometimento,
+          renda_alvo:       resultado.renda_alvo,
+          taxa_kwh:         resultadoPico?.taxa_kwh      || null,
+          custo_pico:       resultadoPico?.custo_pico    || null,
+          res_5pct_pico:    resultadoPico?.res_5pct_pico || null,
+          status_5pct_pico: resultadoPico?.status_5pct_pico || null,
+          renda_mes1:         t1 || null,
+          renda_mes2:         t2 || null,
+          renda_mes3:         t3 || null,
+          renda_media_mensal: totalMeses ? totalMeses / 3 : null
+        };
 
-      const { error } = await db.from('consultas').insert(payload);
+        const { data, error } = await db.from('consultas').insert(payload).select();
 
-      btn.disabled    = false;
-      btn.textContent = '💾 Salvar Consulta';
+        if (error) throw error;
 
-      if (error) {
-        document.getElementById('msg-err').textContent = '❌ Erro: ' + error.message;
-        document.getElementById('msg-err').classList.remove('hidden');
-      } else {
-        document.getElementById('msg-ok').textContent = '✅ Consulta salva com sucesso!';
-        document.getElementById('msg-ok').classList.remove('hidden');
-        setTimeout(() => document.getElementById('msg-ok').classList.add('hidden'), 4000);
+        msgOk.textContent = '✅ Consulta salva com sucesso!';
+        msgOk.classList.remove('hidden');
+        setTimeout(() => msgOk.classList.add('hidden'), 4000);
+
+      } catch (err) {
+        console.error('Erro ao salvar:', err);
+        msgErr.textContent = '❌ Erro: ' + (err.message || JSON.stringify(err));
+        msgErr.classList.remove('hidden');
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = '💾 Salvar Consulta';
       }
     }
 
@@ -756,9 +729,7 @@
             <td class="px-4 py-3 text-sm text-right text-gray-700">${brl(r.parcela)}</td>
             <td class="px-4 py-3 text-sm text-right text-gray-700">${brl(r.renda)}</td>
             <td class="px-4 py-3 text-center">${badgeHtml(r.status_5pct_conta)}</td>
-            <td class="px-4 py-3 text-center">${badgeHtml(r.status_10pct_conta)}</td>
             <td class="px-4 py-3 text-center">${badgeHtml(r.status_5pct_pico)}</td>
-            <td class="px-4 py-3 text-center">${badgeHtml(r.status_10pct_pico)}</td>
             <td class="px-4 py-3 text-sm text-right font-semibold text-green-700">
               ${r.renda_alvo ? brl(r.renda_alvo) : '—'}
             </td>
