@@ -81,13 +81,17 @@
         <!-- Dados da Conta -->
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
           <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Dados da Conta</h2>
-          <div class="grid grid-cols-3 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Conta de Energia (R$)</label>
-              <input id="conta_energia" type="text" placeholder="0,00"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
-                oninput="maskBRL(this); calcular()" onpaste="pasteBRL(event, this)">
-            </div>
+
+          <div class="mb-1">
+            <label class="block text-xs font-medium text-gray-600 mb-2">Conta(s) de Energia (R$)</label>
+            <div id="contas-lista" class="space-y-2"></div>
+            <button onclick="addConta()"
+              class="mt-2 text-xs text-green-600 hover:text-green-700 font-semibold flex items-center gap-1 transition-colors">
+              <span class="text-base leading-none">+</span> Adicionar conta de energia
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-100">
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Parcela (R$)</label>
               <input id="parcela" type="text" placeholder="0,00"
@@ -114,20 +118,7 @@
             ⚠️ Cálculo principal não aprovado. Preencha abaixo para verificar aprovação por pico.
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Consumo da Conta (kWh)</label>
-              <input id="consumo_kwh" type="number" placeholder="0" min="0" step="1"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                oninput="calcularPico()">
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Maior Consumo do Período (kWh)</label>
-              <input id="pico_kwh" type="number" placeholder="0" min="0" step="1"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                oninput="calcularPico()">
-            </div>
-          </div>
+          <div id="pico-contas-lista" class="space-y-4"></div>
         </div>
 
         <!-- Composição de Renda — 3 Meses -->
@@ -342,10 +333,102 @@
 
     // ── Inicialização ────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', () => {
+      addConta(); // 1 conta inicial
       ['mes1', 'mes2', 'mes3'].forEach(m => {
         for (let i = 0; i < 10; i++) addRow(m);
       });
     });
+
+    // ── Múltiplas contas de energia ───────────────────────────────
+    function addConta() {
+      const lista  = document.getElementById('contas-lista');
+      const idx    = lista.querySelectorAll('.conta-row').length + 1;
+      const div    = document.createElement('div');
+      div.className = 'conta-row flex items-center gap-2';
+      div.innerHTML = `
+        <span class="conta-label text-xs text-gray-400 w-14 flex-shrink-0">Conta ${idx}</span>
+        <input type="text" placeholder="0,00"
+          class="conta-input flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
+          oninput="maskBRL(this); calcular()" onpaste="pasteBRL(event, this)">
+        <button onclick="removeConta(this)"
+          class="conta-del w-7 h-7 flex-shrink-0 flex items-center justify-center text-gray-300 hover:text-red-400 transition-colors text-xl leading-none rounded-full hover:bg-red-50 ${idx === 1 ? 'invisible' : ''}">×</button>
+      `;
+      lista.appendChild(div);
+      atualizarLabelContas();
+      atualizarPicoRows();
+    }
+
+    function removeConta(btn) {
+      const lista = document.getElementById('contas-lista');
+      if (lista.querySelectorAll('.conta-row').length <= 1) return;
+      btn.closest('.conta-row').remove();
+      atualizarLabelContas();
+      atualizarPicoRows();
+      calcular();
+    }
+
+    function atualizarLabelContas() {
+      const rows = document.querySelectorAll('.conta-row');
+      rows.forEach((row, i) => {
+        row.querySelector('.conta-label').textContent = rows.length > 1 ? `Conta ${i + 1}` : '';
+        const del = row.querySelector('.conta-del');
+        del.classList.toggle('invisible', i === 0 && rows.length === 1);
+      });
+    }
+
+    function getContaValues() {
+      return Array.from(document.querySelectorAll('.conta-input'))
+        .map(el => parseBRL(el.value));
+    }
+
+    function getContaTotal() {
+      return getContaValues().reduce((s, v) => s + v, 0);
+    }
+
+    // ── Pico dinâmico (1 grupo de kWh por conta) ─────────────────
+    function atualizarPicoRows() {
+      const numContas = document.querySelectorAll('.conta-row').length;
+      const container = document.getElementById('pico-contas-lista');
+      const existentes = container.querySelectorAll('.pico-conta-row');
+
+      // Adicionar linhas faltantes
+      for (let i = existentes.length; i < numContas; i++) {
+        const div = document.createElement('div');
+        div.className = 'pico-conta-row' + (i > 0 ? ' pt-3 border-t border-gray-100' : '');
+        div.innerHTML = `
+          <p class="pico-label text-xs font-medium text-gray-500 mb-2 ${numContas > 1 ? '' : 'hidden'}">Conta ${i + 1}</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Consumo da Conta (kWh)</label>
+              <input type="number" placeholder="0" min="0" step="1"
+                class="pico-consumo w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                oninput="calcularPico()">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Maior Consumo do Período (kWh)</label>
+              <input type="number" placeholder="0" min="0" step="1"
+                class="pico-pico w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                oninput="calcularPico()">
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      }
+
+      // Remover linhas excedentes
+      const atuais = container.querySelectorAll('.pico-conta-row');
+      for (let i = atuais.length - 1; i >= numContas; i--) atuais[i].remove();
+
+      // Atualizar labels e bordas
+      container.querySelectorAll('.pico-conta-row').forEach((row, i) => {
+        row.className = 'pico-conta-row' + (i > 0 ? ' pt-3 border-t border-gray-100' : '');
+        const lbl = row.querySelector('.pico-label');
+        lbl.textContent = `Conta ${i + 1}`;
+        lbl.classList.toggle('hidden', numContas === 1);
+      });
+
+      calcularPico();
+    }
 
     // ── Navegação ─────────────────────────────────────────────────
     function mostrarView(view) {
@@ -473,7 +556,7 @@
 
     // ── Calculadora principal ─────────────────────────────────────
     function calcular() {
-      const conta   = num('conta_energia');
+      const conta   = getContaTotal();
       const parcela = num('parcela');
       const renda   = num('renda');
 
@@ -517,34 +600,42 @@
 
     // ── Cálculo por Pico ─────────────────────────────────────────
     function calcularPico() {
-      const consumo = parseFloat(document.getElementById('consumo_kwh').value) || 0;
-      const pico    = parseFloat(document.getElementById('pico_kwh').value)    || 0;
-      const conta   = num('conta_energia');
-      const renda   = num('renda');
-      const parcela = num('parcela');
+      const contaValues = getContaValues();
+      const renda       = num('renda');
+      const parcela     = num('parcela');
+      const secao       = document.getElementById('pico-resultado');
+      const picoRows    = document.querySelectorAll('.pico-conta-row');
 
-      const secao = document.getElementById('pico-resultado');
+      let custoPicoTotal = 0;
+      let algumPreenchido = false;
 
-      if (!consumo || !pico || !conta) {
+      picoRows.forEach((row, i) => {
+        const consumo = parseFloat(row.querySelector('.pico-consumo').value) || 0;
+        const pico    = parseFloat(row.querySelector('.pico-pico').value)    || 0;
+        const conta   = contaValues[i] || 0;
+        if (consumo > 0 && pico > 0 && conta > 0) {
+          custoPicoTotal += pico * (conta / consumo);
+          algumPreenchido = true;
+        }
+      });
+
+      if (!algumPreenchido || !parcela) {
         secao.classList.add('hidden');
         resultadoPico = null;
         return;
       }
 
-      const taxa      = conta / consumo;
-      const custoPico = pico * taxa;
-      const r5p = (custoPico + renda * 0.05) - parcela;
+      const r5p = (custoPicoTotal + renda * 0.05) - parcela;
 
       secao.classList.remove('hidden');
       document.getElementById('taxa_kwh').textContent =
-        `Taxa: R$ ${taxa.toFixed(4).replace('.', ',')} / kWh`;
+        `Custo pico total: ${brl(custoPicoTotal)}`;
 
       setValor('v_5p', 'b_5p', r5p, true);
 
       resultadoPico = {
-        taxa_kwh:        taxa,
-        custo_pico:      custoPico,
-        res_5pct_pico:   r5p,
+        custo_pico:       custoPicoTotal,
+        res_5pct_pico:    r5p,
         status_5pct_pico: r5p >= 0 ? 'Aprovado por Pico' : 'Pendenciar'
       };
     }
@@ -625,18 +716,18 @@
         const payload = {
           id_contrato:      document.getElementById('id_contrato').value.trim(),
           analista:         document.getElementById('analista').value.trim(),
-          conta_energia:    num('conta_energia'),
+          conta_energia:    getContaTotal(),
           parcela:          num('parcela'),
           renda:            num('renda'),
-          consumo_kwh:      parseFloat(document.getElementById('consumo_kwh').value) || null,
-          pico_kwh:         parseFloat(document.getElementById('pico_kwh').value)    || null,
+          consumo_kwh:      null,
+          pico_kwh:         null,
           renda_individual: parseBRL(document.getElementById('renda_individual').value) || null,
           renda_presumida:  parseBRL(document.getElementById('renda_presumida').value)  || null,
           res_5pct_conta:   resultado.res_5pct_conta,
           status_5pct_conta: resultado.status_5pct_conta,
           comprometimento:  resultado.comprometimento,
           renda_alvo:       resultado.renda_alvo,
-          taxa_kwh:         resultadoPico?.taxa_kwh      || null,
+          taxa_kwh:         resultadoPico?.custo_pico    || null,
           custo_pico:       resultadoPico?.custo_pico    || null,
           res_5pct_pico:    resultadoPico?.res_5pct_pico || null,
           status_5pct_pico: resultadoPico?.status_5pct_pico || null,
