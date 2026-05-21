@@ -807,11 +807,9 @@
       const total    = t1 + t2 + t3;
       const temRenda = total > 0;
       const media    = temRenda ? total / 3 : 0;
-      // Meta: campo da plataforma tem prioridade; senão usa a calculada
-      const metaPlataforma = parseBRL(document.getElementById('renda_alvo_meta')?.value || '');
-      const meta = metaPlataforma > 0 ? metaPlataforma : (resultado?.renda_alvo || 0);
-      // renda ok se: não é obrigatório, OU (tem valores E (sem meta definida OU média >= meta))
-      const rendaOk  = !reqRenda || (temRenda && (meta <= 0 || media >= meta));
+      // renda ok se: não é obrigatório, OU tem pelo menos algum valor preenchido
+      // (analista pode salvar mesmo insuficiente — para registrar a pendência)
+      const rendaOk = !reqRenda || temRenda;
       const ok =
         document.getElementById('id_contrato').value.trim() &&
         document.getElementById('analista').value.trim() &&
