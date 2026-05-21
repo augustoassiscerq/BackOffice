@@ -713,14 +713,28 @@
         const t3 = getTotalMes('mes3');
         const totalMeses = t1 + t2 + t3;
 
+        // Detalhe de cada conta de energia
+        const contaValues = getContaValues().filter(v => v > 0);
+
+        // Detalhe de cada grupo pico (apenas linhas com algum dado preenchido)
+        const picoDados = Array.from(document.querySelectorAll('.pico-conta-row'))
+          .map((row, i) => ({
+            conta_energia: contaValues[i] || 0,
+            consumo_kwh:   parseFloat(row.querySelector('.pico-consumo').value) || null,
+            pico_kwh:      parseFloat(row.querySelector('.pico-pico').value)    || null
+          }))
+          .filter(d => d.consumo_kwh || d.pico_kwh);
+
         const payload = {
           id_contrato:      document.getElementById('id_contrato').value.trim(),
           analista:         document.getElementById('analista').value.trim(),
           conta_energia:    getContaTotal(),
+          contas_energia:   contaValues.length > 0 ? contaValues : null,
           parcela:          num('parcela'),
           renda:            num('renda'),
           consumo_kwh:      null,
           pico_kwh:         null,
+          pico_dados:       picoDados.length > 0 ? picoDados : null,
           renda_individual: parseBRL(document.getElementById('renda_individual').value) || null,
           renda_presumida:  parseBRL(document.getElementById('renda_presumida').value)  || null,
           res_5pct_conta:   resultado.res_5pct_conta,
