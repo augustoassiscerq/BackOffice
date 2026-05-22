@@ -12,9 +12,11 @@
     .tab-ativo          { border-bottom: 3px solid #16a34a; color: #16a34a; font-weight: 700; }
     .badge-aprovar      { background: #dcfce7; color: #15803d; }
     .badge-pico         { background: #dbeafe; color: #1d4ed8; }
+    .badge-excecao      { background: #fef3c7; color: #b45309; }
     .badge-pendenciar   { background: #fee2e2; color: #dc2626; }
     .val-pos            { color: #15803d; }
     .val-neg            { color: #dc2626; }
+    .val-exc            { color: #b45309; }
     .input-brl          { text-align: right; }
     .campo-erro         { border-color: #ef4444 !important; }
     .pico-alerta        { border-color: #f59e0b !important; background-color: #fffbeb !important; }
@@ -144,6 +146,11 @@
                   <span id="b_5c" class="px-2 py-0.5 rounded-full text-xs font-bold"></span>
                 </div>
               </div>
+            </div>
+
+            <!-- Aviso de exceção por divergência ≤ R$10 -->
+            <div id="excecao-hint" class="hidden text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              ⚠️ Divergência de até R$ 10,00 — aprovado por exceção.
             </div>
 
             <!-- Resultado por Pico (aparece apenas quando kWh preenchidos) -->
@@ -362,6 +369,9 @@
   </div>
 
   <script>
+    // ── Utilitário de escape HTML (previne XSS) ───────────────────
+    const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
     // ── Supabase ──────────────────────────────────────────────────
     const SUPA_URL = 'https://vbcmqrkojqmmdgtvdfql.supabase.co';
     const SUPA_KEY = 'sb_publishable_PSOgnNdLOGktZVnA-vyVMQ_XLCWIMIj';
@@ -484,7 +494,7 @@
       const inativo = 'px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all';
       document.getElementById('btn-calc').className = isCalc ? ativo : inativo;
       document.getElementById('btn-hist').className = isCalc ? inativo : ativo;
-      if (!isCalc) carregarHistorico();
+      if (!isCalc && cache.length === 0) carregarHistorico();
     }
 
     // ── Máscara BRL ───────────────────────────────────────────────
@@ -571,7 +581,6 @@
         ? 'font-semibold text-green-700'
         : 'font-semibold text-gray-400';
       calcularRendaResumo();
-      verificarSalvar();
     }
 
     // ── Estado visual do card de renda ───────────────────────────
@@ -643,19 +652,25 @@
           // Primeira substituição: média superou a renda declarada
           _rendaOriginal = rendaAtual;
           _substituindoRenda = true;
-          document.getElementById('renda').value = fmt(media);
-          mostrarAvisoSubst(media, _rendaOriginal);
-          calcular();
-          _substituindoRenda = false;
+          try {
+            document.getElementById('renda').value = fmt(media);
+            mostrarAvisoSubst(media, _rendaOriginal);
+            calcular();
+          } finally {
+            _substituindoRenda = false;
+          }
           return;
 
         } else if (_rendaOriginal !== null && media > _rendaOriginal) {
           // Já substituído e média mudou (mas ainda acima da original): atualiza
           _substituindoRenda = true;
-          document.getElementById('renda').value = fmt(media);
-          mostrarAvisoSubst(media, _rendaOriginal);
-          calcular();
-          _substituindoRenda = false;
+          try {
+            document.getElementById('renda').value = fmt(media);
+            mostrarAvisoSubst(media, _rendaOriginal);
+            calcular();
+          } finally {
+            _substituindoRenda = false;
+          }
           return;
 
         } else if (_rendaOriginal !== null && media <= _rendaOriginal) {
@@ -663,10 +678,13 @@
           const orig = _rendaOriginal;
           _rendaOriginal = null;
           _substituindoRenda = true;
-          document.getElementById('renda').value = fmt(orig);
-          ocultarAvisoSubst();
-          calcular();
-          _substituindoRenda = false;
+          try {
+            document.getElementById('renda').value = fmt(orig);
+            ocultarAvisoSubst();
+            calcular();
+          } finally {
+            _substituindoRenda = false;
+          }
           return;
         }
       }
@@ -705,8 +723,12 @@
 
       setValor('v_5c', 'b_5c', r5c, false);
 
-      // Destaca seção de pico se não aprovado
-      destacarPico(r5c < 0);
+      // Exceção: divergência até R$10 → aprovado por exceção
+      const excecao5c = r5c < 0 && r5c >= -10;
+      document.getElementById('excecao-hint').classList.toggle('hidden', !excecao5c);
+
+      // Destaca seção de pico apenas se rejeição real (> R$10 negativo)
+      destacarPico(r5c < -10);
 
       const comprometimento = parcela - conta;
       const rendaAlvo       = comprometimento > 0 ? comprometimento / 0.05 : 0;
@@ -715,16 +737,17 @@
         rendaAlvo > 0 ? brl(rendaAlvo) : 'Não necessário';
       document.getElementById('comprometimento').textContent = brl(comprometimento);
 
+      const status5c = r5c >= 0 ? 'Aprovar' : r5c >= -10 ? 'Aprovado por Exceção' : 'Pendenciar';
       resultado = {
         res_5pct_conta:    r5c,
-        status_5pct_conta: r5c >= 0 ? 'Aprovar' : 'Pendenciar',
+        status_5pct_conta: status5c,
+        excecao_10:        excecao5c,
         comprometimento,
         renda_alvo: rendaAlvo
       };
 
       calcularPico();
       calcularRendaResumo();
-      verificarSalvar();
     }
 
     // ── Cálculo por Pico ─────────────────────────────────────────
@@ -783,16 +806,20 @@
 
     // ── Utilitário de badge ───────────────────────────────────────
     function setValor(valId, badgeId, valor, isPico) {
-      const ok  = valor >= 0;
+      const ok      = valor >= 0;
+      const excecao = !isPico && !ok && valor >= -10;
       const vEl = document.getElementById(valId);
       const bEl = document.getElementById(badgeId);
 
       vEl.textContent = brl(valor);
-      vEl.className   = `text-xs font-mono font-semibold ${ok ? 'val-pos' : 'val-neg'}`;
+      vEl.className   = `text-xs font-mono font-semibold ${ok ? 'val-pos' : excecao ? 'val-exc' : 'val-neg'}`;
 
       if (isPico && ok) {
         bEl.textContent = 'Aprovado por Pico';
         bEl.className   = 'px-2 py-0.5 rounded-full text-xs font-bold badge-pico';
+      } else if (excecao) {
+        bEl.textContent = 'Aprovado por Exceção';
+        bEl.className   = 'px-2 py-0.5 rounded-full text-xs font-bold badge-excecao';
       } else {
         bEl.textContent = ok ? 'Aprovar' : 'Pendenciar';
         bEl.className   = `px-2 py-0.5 rounded-full text-xs font-bold ${ok ? 'badge-aprovar' : 'badge-pendenciar'}`;
@@ -801,10 +828,11 @@
 
     function badgeHtml(s) {
       if (!s) return '<span class="text-gray-300 text-xs">—</span>';
-      const cls = s === 'Aprovar' ? 'badge-aprovar'
-                : s === 'Aprovado por Pico' ? 'badge-pico'
+      const cls = s === 'Aprovar'              ? 'badge-aprovar'
+                : s === 'Aprovado por Pico'    ? 'badge-pico'
+                : s === 'Aprovado por Exceção' ? 'badge-excecao'
                 : 'badge-pendenciar';
-      return `<span class="px-2 py-0.5 rounded-full text-xs font-bold ${cls}">${s}</span>`;
+      return `<span class="px-2 py-0.5 rounded-full text-xs font-bold ${cls}">${esc(s)}</span>`;
     }
 
     // ── Verificar botão Salvar ────────────────────────────────────
@@ -813,7 +841,6 @@
       const t1 = getTotalMes('mes1'), t2 = getTotalMes('mes2'), t3 = getTotalMes('mes3');
       const total    = t1 + t2 + t3;
       const temRenda = total > 0;
-      const media    = temRenda ? total / 3 : 0;
       // renda ok se: não é obrigatório, OU tem pelo menos algum valor preenchido
       // (analista pode salvar mesmo insuficiente — para registrar a pendência)
       const rendaOk = !reqRenda || temRenda;
@@ -871,20 +898,18 @@
         const payload = {
           id_contrato:      document.getElementById('id_contrato').value.trim(),
           analista:         document.getElementById('analista').value.trim(),
-          conta_energia:    getContaTotal(),
+          conta_energia:    contaValues.reduce((s, v) => s + v, 0),
           contas_energia:   contaValues.length > 0 ? contaValues : null,
           parcela:          num('parcela'),
           renda:            num('renda'),
-          consumo_kwh:      null,
-          pico_kwh:         null,
           pico_dados:       picoDados.length > 0 ? picoDados : null,
           renda_individual: parseBRL(document.getElementById('renda_individual').value) || null,
           renda_presumida:  parseBRL(document.getElementById('renda_presumida').value)  || null,
           res_5pct_conta:   resultado.res_5pct_conta,
           status_5pct_conta: resultado.status_5pct_conta,
+          excecao_10:       resultado.excecao_10 || false,
           comprometimento:  resultado.comprometimento,
           renda_alvo:       resultado.renda_alvo,
-          taxa_kwh:         resultadoPico?.custo_pico    || null,
           custo_pico:       resultadoPico?.custo_pico    || null,
           res_5pct_pico:    resultadoPico?.res_5pct_pico || null,
           status_5pct_pico: resultadoPico?.status_5pct_pico || null,
@@ -983,8 +1008,8 @@
         return `
           <tr class="hover:bg-gray-50 transition-colors">
             <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">${dtStr}</td>
-            <td class="px-4 py-3 text-sm font-medium text-gray-900">${r.analista}</td>
-            <td class="px-4 py-3 text-sm font-mono text-gray-700">${r.id_contrato}</td>
+            <td class="px-4 py-3 text-sm font-medium text-gray-900">${esc(r.analista)}</td>
+            <td class="px-4 py-3 text-sm font-mono text-gray-700">${esc(r.id_contrato)}</td>
             <td class="px-4 py-3 text-sm text-right text-gray-700">${brl(r.conta_energia)}</td>
             <td class="px-4 py-3 text-sm text-right text-gray-700">${brl(r.parcela)}</td>
             <td class="px-4 py-3 text-sm text-right text-gray-700">${brl(r.renda)}</td>
