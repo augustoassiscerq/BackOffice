@@ -927,9 +927,9 @@
 
         if (error) throw error;
 
-        msgOk.textContent = '✅ Consulta salva com sucesso!';
+        msgOk.textContent = '✅ Consulta salva! Preparando novo formulário...';
         msgOk.classList.remove('hidden');
-        setTimeout(() => msgOk.classList.add('hidden'), 4000);
+        setTimeout(() => { msgOk.classList.add('hidden'); limparFormulario(); }, 2000);
 
       } catch (err) {
         console.error('Erro ao salvar:', err);
@@ -939,6 +939,56 @@
         btn.disabled    = false;
         btn.textContent = '💾 Salvar Consulta';
       }
+    }
+
+    // ── Limpar formulário após salvar ────────────────────────────
+    function limparFormulario() {
+      // Identificação
+      ['id_contrato', 'analista'].forEach(id => {
+        const el = document.getElementById(id);
+        el.value = '';
+        limparErro(el);
+      });
+
+      // Contas de energia: manter só a primeira, em branco
+      const lista = document.getElementById('contas-lista');
+      Array.from(lista.querySelectorAll('.conta-row')).forEach((row, i) => {
+        if (i === 0) row.querySelector('.conta-input').value = '';
+        else row.remove();
+      });
+      atualizarLabelContas();
+      atualizarPicoRows();
+
+      // Parcela e Renda
+      document.getElementById('parcela').value = '';
+      document.getElementById('renda').value   = '';
+      _rendaOriginal = null;
+      ocultarAvisoSubst();
+
+      // Campos opcionais
+      document.getElementById('renda_alvo_meta').value  = '';
+      document.getElementById('renda_individual').value = '';
+      document.getElementById('renda_presumida').value  = '';
+
+      // Limpar todos os inputs de renda dos 3 meses
+      ['mes1', 'mes2', 'mes3'].forEach(mes => {
+        document.querySelectorAll('#rows-' + mes + ' .renda-input')
+          .forEach(el => { el.value = ''; });
+        const tot = document.getElementById('total-' + mes);
+        tot.textContent = brl(0);
+        tot.className   = 'font-semibold text-gray-400';
+      });
+
+      // Fechar seção CASH se aberta
+      document.getElementById('cash-section').classList.add('hidden');
+      document.getElementById('arrow-cash').textContent = '▼ expandir';
+
+      // Checkbox volta ao padrão (SIM)
+      document.getElementById('req-renda').checked = true;
+
+      // Recalcula tudo do zero
+      calcular();
+      atualizarReqRenda();
     }
 
     // ── Histórico ─────────────────────────────────────────────────
