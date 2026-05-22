@@ -737,7 +737,8 @@
         rendaAlvo > 0 ? brl(rendaAlvo) : 'Não necessário';
       document.getElementById('comprometimento').textContent = brl(comprometimento);
 
-      const status5c = r5c >= 0 ? 'Aprovar' : r5c >= -10 ? 'Aprovado por Exceção' : 'Pendenciar';
+      const fmt2 = v => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const status5c = r5c >= 0 ? 'Aprovar' : r5c >= -10 ? `Aprovado por Exceção (${fmt2(Math.abs(r5c))})` : 'Pendenciar';
       resultado = {
         res_5pct_conta:    r5c,
         status_5pct_conta: status5c,
@@ -818,7 +819,8 @@
         bEl.textContent = 'Aprovado por Pico';
         bEl.className   = 'px-2 py-0.5 rounded-full text-xs font-bold badge-pico';
       } else if (excecao) {
-        bEl.textContent = 'Aprovado por Exceção';
+        const div = Math.abs(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        bEl.textContent = `Aprovado por Exceção (${div})`;
         bEl.className   = 'px-2 py-0.5 rounded-full text-xs font-bold badge-excecao';
       } else {
         bEl.textContent = ok ? 'Aprovar' : 'Pendenciar';
@@ -830,7 +832,7 @@
       if (!s) return '<span class="text-gray-300 text-xs">—</span>';
       const cls = s === 'Aprovar'              ? 'badge-aprovar'
                 : s === 'Aprovado por Pico'    ? 'badge-pico'
-                : s === 'Aprovado por Exceção' ? 'badge-excecao'
+                : s.startsWith('Aprovado por Exceção') ? 'badge-excecao'
                 : 'badge-pendenciar';
       return `<span class="px-2 py-0.5 rounded-full text-xs font-bold ${cls}">${esc(s)}</span>`;
     }
