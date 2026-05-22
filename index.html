@@ -6,6 +6,7 @@
   <title>Calculadora de Renda — Solagora</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     .tab-ativo          { border-bottom: 3px solid #16a34a; color: #16a34a; font-weight: 700; }
     .badge-aprovar      { background: #dcfce7; color: #15803d; }
@@ -23,17 +24,8 @@
   <!-- HEADER -->
   <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
     <div class="max-w-6xl mx-auto px-4 flex items-center justify-between">
-      <div class="flex items-center gap-3 py-3">
-        <div class="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 6.343l-.707-.707m12.728 12.728l-.707-.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-          </svg>
-        </div>
-        <div>
-          <p class="text-base font-bold text-gray-900 leading-none">Sol Agora</p>
-          <p class="text-xs text-gray-400 leading-none mt-0.5">Augusto Assis</p>
-        </div>
+      <div class="flex items-center py-2">
+        <img src="OIP.webp" alt="Sol Agora" class="h-10 w-auto">
       </div>
       <nav class="flex">
         <button id="btn-calc" onclick="mostrarView('calc')"
@@ -329,6 +321,10 @@
           onchange="filtrar()">
         <button onclick="carregarHistorico()"
           class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">↺ Atualizar</button>
+        <button onclick="exportarExcel()"
+          class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5">
+          📥 Exportar Excel
+        </button>
         <span id="hist-count" class="text-xs text-gray-400 ml-auto"></span>
       </div>
     </div>
@@ -355,6 +351,8 @@
           <tbody id="hist-body" class="divide-y divide-gray-100"></tbody>
         </table>
       </div>
+      <!-- Paginação -->
+      <div id="hist-paginacao" class="hidden border-t border-gray-100"></div>
     </div>
   </div>
 
@@ -365,9 +363,12 @@
     const db = supabase.createClient(SUPA_URL, SUPA_KEY);
 
     // ── Estado ────────────────────────────────────────────────────
-    let resultado     = null;
-    let resultadoPico = null;
-    let cache         = [];
+    let resultado      = null;
+    let resultadoPico  = null;
+    let cache          = [];
+    let filtradosAtual = [];
+    let paginaAtual    = 1;
+    const POR_PAGINA   = 50;
 
     // ── Inicialização ────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', () => {
@@ -911,12 +912,13 @@
       document.getElementById('hist-loading').classList.remove('hidden');
       document.getElementById('hist-tabela').classList.add('hidden');
       document.getElementById('hist-vazio').classList.add('hidden');
+      document.getElementById('hist-paginacao').classList.add('hidden');
 
       const { data, error } = await db
         .from('consultas')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(5000);
 
       document.getElementById('hist-loading').classList.add('hidden');
 
@@ -927,7 +929,9 @@
       }
 
       cache = data || [];
-      renderizar(cache);
+      filtradosAtual = [...cache];
+      paginaAtual = 1;
+      renderizar();
     }
 
     function filtrar() {
@@ -936,29 +940,38 @@
       const fde = document.getElementById('f-de').value;
       const fat = document.getElementById('f-ate').value;
 
-      renderizar(cache.filter(r => {
+      filtradosAtual = cache.filter(r => {
         if (fa  && !r.analista.toLowerCase().includes(fa))    return false;
         if (fc  && !r.id_contrato.toLowerCase().includes(fc)) return false;
         const d = r.created_at.slice(0, 10);
         if (fde && d < fde) return false;
         if (fat && d > fat) return false;
         return true;
-      }));
+      });
+      paginaAtual = 1;
+      renderizar();
     }
 
-    function renderizar(data) {
-      document.getElementById('hist-count').textContent = `${data.length} registro(s)`;
+    function renderizar() {
+      const total       = filtradosAtual.length;
+      const totalPags   = Math.max(1, Math.ceil(total / POR_PAGINA));
+      const inicio      = (paginaAtual - 1) * POR_PAGINA;
+      const paginaDados = filtradosAtual.slice(inicio, inicio + POR_PAGINA);
 
-      if (!data.length) {
+      document.getElementById('hist-count').textContent =
+        `${total} registro(s) — página ${paginaAtual} de ${totalPags}`;
+
+      if (!total) {
         document.getElementById('hist-vazio').classList.remove('hidden');
         document.getElementById('hist-tabela').classList.add('hidden');
+        document.getElementById('hist-paginacao').classList.add('hidden');
         return;
       }
 
       document.getElementById('hist-vazio').classList.add('hidden');
       document.getElementById('hist-tabela').classList.remove('hidden');
 
-      document.getElementById('hist-body').innerHTML = data.map(r => {
+      document.getElementById('hist-body').innerHTML = paginaDados.map(r => {
         const dt = new Date(r.created_at);
         const dtStr = dt.toLocaleDateString('pt-BR') + ' ' +
                       dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -980,6 +993,87 @@
             </td>
           </tr>`;
       }).join('');
+
+      renderizarPaginacao(totalPags);
+    }
+
+    function renderizarPaginacao(totalPags) {
+      const el = document.getElementById('hist-paginacao');
+      if (totalPags <= 1) { el.classList.add('hidden'); return; }
+      el.classList.remove('hidden');
+
+      const btn = (p, label, ativo = false, disabled = false) =>
+        `<button onclick="irPagina(${p})" ${disabled ? 'disabled' : ''}
+          class="px-3 py-1.5 rounded text-sm font-medium transition-colors
+          ${ativo    ? 'bg-green-600 text-white' :
+            disabled ? 'text-gray-300 cursor-not-allowed' :
+                       'text-gray-600 hover:bg-gray-100'}">${label}</button>`;
+
+      const range = [];
+      for (let i = Math.max(1, paginaAtual - 2); i <= Math.min(totalPags, paginaAtual + 2); i++) {
+        range.push(i);
+      }
+
+      let html = '<div class="flex items-center justify-center gap-1 py-3 flex-wrap">';
+      html += btn(paginaAtual - 1, '‹ Anterior', false, paginaAtual === 1);
+      if (range[0] > 1) {
+        html += btn(1, '1');
+        if (range[0] > 2) html += '<span class="text-gray-400 px-1">…</span>';
+      }
+      range.forEach(p => { html += btn(p, p, p === paginaAtual); });
+      if (range[range.length - 1] < totalPags) {
+        if (range[range.length - 1] < totalPags - 1) html += '<span class="text-gray-400 px-1">…</span>';
+        html += btn(totalPags, totalPags);
+      }
+      html += btn(paginaAtual + 1, 'Próximo ›', false, paginaAtual === totalPags);
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    function irPagina(p) {
+      const totalPags = Math.ceil(filtradosAtual.length / POR_PAGINA);
+      if (p < 1 || p > totalPags) return;
+      paginaAtual = p;
+      renderizar();
+      document.getElementById('view-hist').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Exportar Excel ────────────────────────────────────────────
+    function exportarExcel() {
+      if (!filtradosAtual.length) {
+        alert('Nenhum registro para exportar com os filtros atuais.');
+        return;
+      }
+
+      const linhas = filtradosAtual.map(r => ({
+        'Data/Hora':             new Date(r.created_at).toLocaleString('pt-BR'),
+        'Analista':              r.analista || '',
+        'ID Contrato':           r.id_contrato || '',
+        'Conta Energia (R$)':    r.conta_energia  || 0,
+        'Parcela (R$)':          r.parcela        || 0,
+        'Renda (R$)':            r.renda          || 0,
+        'Resultado 5% Conta':    r.res_5pct_conta || 0,
+        'Status 5% Conta':       r.status_5pct_conta || '',
+        'Custo Pico (R$)':       r.custo_pico     || 0,
+        'Resultado 5% Pico':     r.res_5pct_pico  || 0,
+        'Status 5% Pico':        r.status_5pct_pico || '',
+        'Renda Alvo (R$)':       r.renda_alvo     || 0,
+        'Média Mensal Renda (R$)': r.renda_media_mensal || 0,
+        'Mês 1 (R$)':            r.renda_mes1     || 0,
+        'Mês 2 (R$)':            r.renda_mes2     || 0,
+        'Mês 3 (R$)':            r.renda_mes3     || 0,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(linhas);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Histórico');
+
+      // Ajustar largura das colunas automaticamente
+      const cols = Object.keys(linhas[0]).map(k => ({ wch: Math.max(k.length, 14) }));
+      ws['!cols'] = cols;
+
+      const data = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+      XLSX.writeFile(wb, `historico-sol-agora-${data}.xlsx`);
     }
   </script>
 </body>
