@@ -351,6 +351,7 @@
               <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Data/Hora</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Analista</th>
               <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Contrato</th>
+              <th class="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Comp. Renda</th>
               <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Conta</th>
               <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Parcela</th>
               <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Renda</th>
@@ -900,6 +901,7 @@
         const payload = {
           id_contrato:      document.getElementById('id_contrato').value.trim(),
           analista:         document.getElementById('analista').value.trim(),
+          req_renda:        document.getElementById('req-renda').checked,
           conta_energia:    contaValues.reduce((s, v) => s + v, 0),
           contas_energia:   contaValues.length > 0 ? contaValues : null,
           parcela:          num('parcela'),
@@ -1012,6 +1014,11 @@
             <td class="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">${dtStr}</td>
             <td class="px-4 py-3 text-sm font-medium text-gray-900">${esc(r.analista)}</td>
             <td class="px-4 py-3 text-sm font-mono text-gray-700">${esc(r.id_contrato)}</td>
+            <td class="px-4 py-3 text-center">
+              ${r.req_renda === false
+                ? '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">NÃO</span>'
+                : '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">SIM</span>'}
+            </td>
             <td class="px-4 py-3 text-sm text-right text-gray-700">${brl(r.conta_energia)}</td>
             <td class="px-4 py-3 text-sm text-right text-gray-700">${brl(r.parcela)}</td>
             <td class="px-4 py-3 text-sm text-right text-gray-700">${brl(r.renda)}</td>
@@ -1081,6 +1088,7 @@
         'Data/Hora':             new Date(r.created_at).toLocaleString('pt-BR'),
         'Analista':              r.analista || '',
         'ID Contrato':           r.id_contrato || '',
+        'Comp. Renda':           r.req_renda === false ? 'NÃO' : 'SIM',
         'Conta Energia (R$)':    r.conta_energia  || 0,
         'Parcela (R$)':          r.parcela        || 0,
         'Renda (R$)':            r.renda          || 0,
