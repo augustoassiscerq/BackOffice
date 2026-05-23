@@ -37,6 +37,8 @@
           class="px-5 py-4 text-sm tab-ativo border-b-2 transition-all">🧮 Calculadora</button>
         <button id="btn-hist" onclick="mostrarView('hist')"
           class="px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all">📋 Histórico</button>
+        <button id="btn-cancel" onclick="mostrarView('cancel')"
+          class="px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all">⚠️ Cancelamentos</button>
       </nav>
     </div>
   </header>
@@ -362,6 +364,257 @@
     </div>
   </div>
 
+  <!-- VIEW: CANCELAMENTOS -->
+  <div id="view-cancel" class="hidden max-w-7xl mx-auto px-4 py-6 space-y-4">
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-4 gap-4">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Total de Casos</p>
+        <p id="kpi-total" class="text-3xl font-bold text-gray-800">—</p>
+      </div>
+      <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+        <p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Pendentes</p>
+        <p id="kpi-pendentes" class="text-3xl font-bold text-red-600">—</p>
+      </div>
+      <div class="bg-white rounded-xl border border-green-200 shadow-sm p-4">
+        <p class="text-xs font-semibold text-green-400 uppercase tracking-widest mb-1">Recuperados</p>
+        <p id="kpi-recuperados" class="text-3xl font-bold text-green-600">—</p>
+      </div>
+      <div class="bg-white rounded-xl border border-orange-200 shadow-sm p-4">
+        <p class="text-xs font-semibold text-orange-400 uppercase tracking-widest mb-1">Em Perda</p>
+        <p id="kpi-perda" class="text-3xl font-bold text-orange-600">—</p>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+      <div class="flex items-center gap-3 flex-wrap">
+        <input id="cf-busca" type="text" placeholder="🔍 CCB ou Cliente"
+          class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 w-48"
+          oninput="filtrarCancelamentos()">
+        <select id="cf-status" onchange="filtrarCancelamentos()"
+          class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">Todos os Status</option>
+          <option value="pendente">Pendentes</option>
+          <option value="recuperado">Recuperados</option>
+          <option value="resolve">Resolve</option>
+        </select>
+        <select id="cf-perda" onchange="filtrarCancelamentos()"
+          class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">Perda: Todos</option>
+          <option value="SIM">Em Perda</option>
+        </select>
+        <select id="cf-range" onchange="filtrarCancelamentos()"
+          class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+          <option value="">Todos os Ranges</option>
+          <option value="Range 01 - 29">01–29 dias</option>
+          <option value="Range 30 - 59">30–59 dias</option>
+          <option value="Range 60 - 89">60–89 dias</option>
+          <option value="Range 90 - 119">90–119 dias</option>
+          <option value="Range 120 - 199">120–199 dias</option>
+          <option value="Range 200 >">200+ dias</option>
+        </select>
+        <input id="cf-integrador" type="text" placeholder="🔍 Integrador"
+          class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 w-44"
+          oninput="filtrarCancelamentos()">
+        <button onclick="carregarCancelamentos()"
+          class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">↺ Atualizar</button>
+        <button onclick="abrirModalCancel(null)"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">+ Novo Caso</button>
+        <button onclick="exportarExcelCancelamentos()"
+          class="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">📥 Exportar Excel</button>
+        <span id="cancel-count" class="text-xs text-gray-400 ml-auto"></span>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div id="cancel-loading" class="text-center py-16 text-gray-400 text-sm">⏳ Carregando...</div>
+      <div id="cancel-vazio"   class="hidden text-center py-16 text-gray-400 text-sm">📭 Nenhum caso encontrado.</div>
+      <div id="cancel-tabela"  class="hidden overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Nº Ordem</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">CCB</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cliente</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Integrador</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Distribuidor</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Data Solic.</th>
+              <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Dias</th>
+              <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Range</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Perda</th>
+              <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Valor Projeto</th>
+            </tr>
+          </thead>
+          <tbody id="cancel-body" class="divide-y divide-gray-100"></tbody>
+        </table>
+      </div>
+      <div id="cancel-paginacao" class="hidden border-t border-gray-100"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: Cancelamento -->
+  <div id="modal-cancel" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+        <h2 id="modal-cancel-titulo" class="text-base font-bold text-gray-800"></h2>
+        <button onclick="fecharModalCancel()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+      </div>
+      <div class="overflow-y-auto flex-1 px-6 py-4">
+        <form id="form-cancel" class="space-y-5" onsubmit="return false">
+
+          <!-- Identificação -->
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Identificação</p>
+            <div class="grid grid-cols-4 gap-3">
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">CCB <span class="text-red-500">*</span></label>
+                <input id="mc-ccb" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Nº da Ordem</label>
+                <input id="mc-numero_ordem" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div class="col-span-2"><label class="block text-xs font-medium text-gray-600 mb-1">Cliente <span class="text-red-500">*</span></label>
+                <input id="mc-cliente" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">CPF / CNPJ</label>
+                <input id="mc-cpf_cnpj" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div class="col-span-2"><label class="block text-xs font-medium text-gray-600 mb-1">Integrador</label>
+                <input id="mc-integrador" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Distribuidor</label>
+                <input id="mc-distribuidor" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+            </div>
+          </div>
+
+          <!-- Datas e Prazo -->
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Datas e Prazo</p>
+            <div class="grid grid-cols-4 gap-3">
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Data Assinatura CCB</label>
+                <input id="mc-data_assinatura_ccb" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Data da Solicitação</label>
+                <input id="mc-data_solicitacao" type="date" onchange="calcularDiasRangeCancel()"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Dias de Solicitação</label>
+                <input id="mc-dias_solicitacao" type="number" readonly
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Range</label>
+                <input id="mc-range_prazo" type="text" readonly
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none"></div>
+            </div>
+          </div>
+
+          <!-- Status e Rastreamento -->
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Status e Rastreamento</p>
+            <div class="grid grid-cols-4 gap-3">
+              <div class="col-span-2"><label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                <select id="mc-status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">— Selecione —</option>
+                  <optgroup label="Recuperado">
+                    <option>Recuperado Valor Total</option>
+                    <option>Recuperado Valor Total - Voltar e cobrar VP</option>
+                  </optgroup>
+                  <optgroup label="Resolve">
+                    <option>Resolve - Quitado via Confissão de Dívida</option>
+                    <option>Resolve - Quitado Cessão Direta</option>
+                  </optgroup>
+                  <optgroup label="Pendente">
+                    <option>Pendente Integrador</option>
+                    <option>Pendente Distribuidor</option>
+                    <option>Pendente Distribuidor + Integrador</option>
+                    <option>Pendente Distribuidor + Integrador (RESOLVE VENDA RESSELLER)</option>
+                    <option>Pendente Distribuidor (RESOLVE VENDA RESSELLER)</option>
+                    <option>Pendente Integrador + Distribuidor</option>
+                    <option>Pendente Reseller</option>
+                    <option>Pendente Reseller - Cobrar VP</option>
+                    <option>Integrador - Cobrar VP</option>
+                  </optgroup>
+                </select></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Cliente Confirmou?</label>
+                <select id="mc-cliente_confirmou" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">—</option><option>Sim</option><option>Não</option>
+                </select></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Perda</label>
+                <select id="mc-perda" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">—</option><option>SIM</option><option>NÃO</option>
+                </select></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Boleto Emitido?</label>
+                <select id="mc-boleto_emitido" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">—</option><option>Sim</option><option>Não</option>
+                </select></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Boleto Pago?</label>
+                <select id="mc-boleto_pago" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">—</option><option>Sim</option><option>Não</option>
+                </select></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Data da Quitação</label>
+                <input id="mc-data_quitacao" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Devolvido Integrador?</label>
+                <select id="mc-devolvido_integrador" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">—</option><option>Sim</option><option>Não</option>
+                </select></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Devolvido Distribuidor?</label>
+                <select id="mc-devolvido_distribuidor" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">—</option><option>Sim</option><option>Não</option>
+                </select></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Status Integrador</label>
+                <input id="mc-status_integrador" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Resultado</label>
+                <select id="mc-resultado" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">—</option>
+                  <option>Alocado em perdas</option>
+                  <option>61 e 90 dias</option>
+                  <option>91 e 120 dias</option>
+                </select></div>
+            </div>
+          </div>
+
+          <!-- Financeiro -->
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Financeiro</p>
+            <div class="grid grid-cols-3 gap-3">
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor do Projeto (R$)</label>
+                <input id="mc-valor_projeto" type="text" placeholder="0,00"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Boleto de Quitação (R$)</label>
+                <input id="mc-valor_boleto_quitacao" type="text" placeholder="0,00"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Não Recuperado (R$)</label>
+                <input id="mc-valor_nao_recuperado" type="text" placeholder="0,00"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Pendente Distribuidor (R$)</label>
+                <input id="mc-valor_pendente_distribuidor" type="text" placeholder="0,00"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Pendente Integrador (R$)</label>
+                <input id="mc-valor_pendente_integrador" type="text" placeholder="0,00"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
+            </div>
+          </div>
+
+          <!-- Observações -->
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Observações</p>
+            <textarea id="mc-observacao" rows="3" placeholder="Anotações sobre o caso..."
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+          </div>
+
+          <p id="mc-msg-ok"  class="hidden text-center text-xs text-green-700 bg-green-50 rounded-lg py-2 font-medium"></p>
+          <p id="mc-msg-err" class="hidden text-center text-xs text-red-600 bg-red-50 rounded-lg py-2"></p>
+        </form>
+      </div>
+      <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
+        <button onclick="fecharModalCancel()"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+        <button id="mc-btn-salvar" onclick="salvarCancelamento()"
+          class="px-6 py-2 rounded-lg text-sm font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors">💾 Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ── Utilitário de escape HTML (previne XSS) ───────────────────
     const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -481,14 +734,14 @@
 
     // ── Navegação ─────────────────────────────────────────────────
     function mostrarView(view) {
-      const isCalc = view === 'calc';
-      document.getElementById('view-calc').classList.toggle('hidden', !isCalc);
-      document.getElementById('view-hist').classList.toggle('hidden',  isCalc);
       const ativo   = 'px-5 py-4 text-sm tab-ativo border-b-2 transition-all';
       const inativo = 'px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all';
-      document.getElementById('btn-calc').className = isCalc ? ativo : inativo;
-      document.getElementById('btn-hist').className = isCalc ? inativo : ativo;
-      if (!isCalc && cache.length === 0) carregarHistorico();
+      ['calc', 'hist', 'cancel'].forEach(v => {
+        document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
+        document.getElementById('btn-'  + v).className = v === view ? ativo : inativo;
+      });
+      if (view === 'hist'   && cache.length === 0)               carregarHistorico();
+      if (view === 'cancel' && cacheCancelamentos.length === 0)  carregarCancelamentos();
     }
 
     // ── Máscara BRL ───────────────────────────────────────────────
@@ -1104,6 +1357,302 @@
       paginaAtual = p;
       renderizar();
       document.getElementById('view-hist').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Cancelamentos — Estado ────────────────────────────────────
+    let cacheCancelamentos = [];
+    let filtradosCancel    = [];
+    let paginaCancel       = 1;
+    const POR_PAGINA_CANCEL = 50;
+    let editandoCancelId   = null;
+
+    async function carregarCancelamentos() {
+      document.getElementById('cancel-loading').classList.remove('hidden');
+      document.getElementById('cancel-tabela').classList.add('hidden');
+      document.getElementById('cancel-vazio').classList.add('hidden');
+      document.getElementById('cancel-paginacao').classList.add('hidden');
+
+      const { data, error } = await db
+        .from('cancelamentos').select('*')
+        .order('dias_solicitacao', { ascending: false }).limit(5000);
+
+      document.getElementById('cancel-loading').classList.add('hidden');
+      if (error) {
+        document.getElementById('cancel-loading').textContent = '❌ Erro: ' + error.message;
+        document.getElementById('cancel-loading').classList.remove('hidden');
+        return;
+      }
+      cacheCancelamentos = data || [];
+      atualizarKpisCancel();
+      filtrarCancelamentos();
+    }
+
+    function atualizarKpisCancel() {
+      const d = cacheCancelamentos;
+      document.getElementById('kpi-total').textContent      = d.length;
+      document.getElementById('kpi-pendentes').textContent  = d.filter(r => (r.status||'').toLowerCase().includes('pendente')).length;
+      document.getElementById('kpi-recuperados').textContent= d.filter(r => { const s=(r.status||'').toLowerCase(); return s.includes('recuperado')||s.includes('resolve'); }).length;
+      document.getElementById('kpi-perda').textContent      = d.filter(r => r.perda === 'SIM').length;
+    }
+
+    function filtrarCancelamentos() {
+      const busca  = document.getElementById('cf-busca').value.toLowerCase();
+      const stFilt = document.getElementById('cf-status').value.toLowerCase();
+      const perdaF = document.getElementById('cf-perda').value;
+      const rangeF = document.getElementById('cf-range').value;
+      const intFilt= document.getElementById('cf-integrador').value.toLowerCase();
+
+      filtradosCancel = cacheCancelamentos.filter(r => {
+        if (busca  && !((r.ccb||'').toLowerCase().includes(busca)||(r.cliente||'').toLowerCase().includes(busca))) return false;
+        if (stFilt && !(r.status||'').toLowerCase().includes(stFilt)) return false;
+        if (perdaF && r.perda !== perdaF) return false;
+        if (rangeF && r.range_prazo !== rangeF) return false;
+        if (intFilt&& !(r.integrador||'').toLowerCase().includes(intFilt)) return false;
+        return true;
+      });
+      paginaCancel = 1;
+      renderizarCancelamentos();
+    }
+
+    function renderizarCancelamentos() {
+      const total    = filtradosCancel.length;
+      const totalPags= Math.max(1, Math.ceil(total / POR_PAGINA_CANCEL));
+      const inicio   = (paginaCancel - 1) * POR_PAGINA_CANCEL;
+      const dados    = filtradosCancel.slice(inicio, inicio + POR_PAGINA_CANCEL);
+
+      document.getElementById('cancel-count').textContent =
+        `${total} caso(s) — página ${paginaCancel} de ${totalPags}`;
+
+      if (!total) {
+        document.getElementById('cancel-vazio').classList.remove('hidden');
+        document.getElementById('cancel-tabela').classList.add('hidden');
+        document.getElementById('cancel-paginacao').classList.add('hidden');
+        return;
+      }
+      document.getElementById('cancel-vazio').classList.add('hidden');
+      document.getElementById('cancel-tabela').classList.remove('hidden');
+
+      document.getElementById('cancel-body').innerHTML = dados.map(r => {
+        const stCls    = getStatusClsCancel(r.status);
+        const rgCls    = getRangeClsCancel(r.range_prazo);
+        const perdaCls = r.perda === 'SIM' ? 'badge-pendenciar' : 'bg-gray-100 text-gray-500';
+        const diasCls  = (r.dias_solicitacao||0) > 90 ? 'text-red-600 font-bold'
+                       : (r.dias_solicitacao||0) > 30 ? 'text-orange-500 font-semibold'
+                       : 'text-gray-600';
+        const dt = r.data_solicitacao
+          ? new Date(r.data_solicitacao + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+        return `<tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="abrirModalCancel(${r.id})">
+          <td class="px-3 py-2.5 text-xs text-gray-400">${esc(r.numero_ordem||'—')}</td>
+          <td class="px-3 py-2.5 text-sm font-mono font-semibold text-gray-800">${esc(r.ccb||'—')}</td>
+          <td class="px-3 py-2.5 text-sm text-gray-800">${esc(r.cliente||'—')}</td>
+          <td class="px-3 py-2.5 text-xs text-gray-600">${esc(r.integrador||'—')}</td>
+          <td class="px-3 py-2.5 text-xs text-gray-600">${esc(r.distribuidor||'—')}</td>
+          <td class="px-3 py-2.5 text-xs text-gray-400 whitespace-nowrap">${dt}</td>
+          <td class="px-3 py-2.5 text-center text-sm ${diasCls}">${r.dias_solicitacao??'—'}</td>
+          <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${rgCls}">${esc(r.range_prazo||'—')}</span></td>
+          <td class="px-3 py-2.5"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${stCls}">${esc(r.status||'—')}</span></td>
+          <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${perdaCls}">${esc(r.perda||'—')}</span></td>
+          <td class="px-3 py-2.5 text-sm text-right text-gray-700">${r.valor_projeto ? brl(r.valor_projeto) : '—'}</td>
+        </tr>`;
+      }).join('');
+
+      renderizarPaginacaoCancel(totalPags);
+    }
+
+    function getStatusClsCancel(s) {
+      if (!s) return 'bg-gray-100 text-gray-500';
+      const l = s.toLowerCase();
+      if (l.includes('recuperado')) return 'badge-aprovar';
+      if (l.includes('resolve') || l.includes('quitado')) return 'badge-pico';
+      if (l.includes('pendente')) return 'badge-pendenciar';
+      return 'bg-gray-100 text-gray-500';
+    }
+
+    function getRangeClsCancel(r) {
+      if (!r) return 'bg-gray-100 text-gray-500';
+      if (r.includes('01 - 29'))  return 'bg-green-100 text-green-700';
+      if (r.includes('30 - 59'))  return 'bg-yellow-100 text-yellow-700';
+      if (r.includes('60') || r.includes('90')) return 'bg-orange-100 text-orange-700';
+      return 'bg-red-100 text-red-700';
+    }
+
+    function renderizarPaginacaoCancel(totalPags) {
+      const el = document.getElementById('cancel-paginacao');
+      if (totalPags <= 1) { el.classList.add('hidden'); return; }
+      el.classList.remove('hidden');
+      const btn = (p, label, ativo=false, dis=false) =>
+        `<button onclick="irPaginaCancel(${p})" ${dis?'disabled':''}
+          class="px-3 py-1.5 rounded text-sm font-medium transition-colors
+          ${ativo?'bg-green-600 text-white':dis?'text-gray-300 cursor-not-allowed':'text-gray-600 hover:bg-gray-100'}">${label}</button>`;
+      const range=[];
+      for(let i=Math.max(1,paginaCancel-2);i<=Math.min(totalPags,paginaCancel+2);i++) range.push(i);
+      let html='<div class="flex items-center justify-center gap-1 py-3 flex-wrap">';
+      html+=btn(paginaCancel-1,'‹ Anterior',false,paginaCancel===1);
+      if(range[0]>1){html+=btn(1,'1');if(range[0]>2)html+='<span class="text-gray-400 px-1">…</span>';}
+      range.forEach(p=>{html+=btn(p,p,p===paginaCancel);});
+      if(range[range.length-1]<totalPags){if(range[range.length-1]<totalPags-1)html+='<span class="text-gray-400 px-1">…</span>';html+=btn(totalPags,totalPags);}
+      html+=btn(paginaCancel+1,'Próximo ›',false,paginaCancel===totalPags)+'</div>';
+      el.innerHTML=html;
+    }
+
+    function irPaginaCancel(p) {
+      const tp = Math.ceil(filtradosCancel.length / POR_PAGINA_CANCEL);
+      if (p < 1 || p > tp) return;
+      paginaCancel = p;
+      renderizarCancelamentos();
+      document.getElementById('view-cancel').scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+
+    // ── Modal Cancelamento ────────────────────────────────────────
+    function abrirModalCancel(id) {
+      editandoCancelId = id;
+      document.getElementById('form-cancel').reset();
+      document.getElementById('mc-msg-ok').classList.add('hidden');
+      document.getElementById('mc-msg-err').classList.add('hidden');
+      document.getElementById('modal-cancel-titulo').textContent =
+        id === null ? 'Novo Caso de Cancelamento' : 'Editar Cancelamento';
+      if (id !== null) {
+        const r = cacheCancelamentos.find(x => x.id === id);
+        if (r) preencherModalCancel(r);
+      }
+      document.getElementById('modal-cancel').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function preencherModalCancel(r) {
+      const fmtBrl = v => v != null && v !== '' ? Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '';
+      const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val??''; };
+      set('mc-numero_ordem', r.numero_ordem);     set('mc-ccb', r.ccb);
+      set('mc-cliente', r.cliente);               set('mc-cpf_cnpj', r.cpf_cnpj);
+      set('mc-integrador', r.integrador);         set('mc-distribuidor', r.distribuidor);
+      set('mc-data_assinatura_ccb', r.data_assinatura_ccb||'');
+      set('mc-data_solicitacao', r.data_solicitacao||'');
+      set('mc-dias_solicitacao', r.dias_solicitacao??'');
+      set('mc-range_prazo', r.range_prazo);       set('mc-status', r.status);
+      set('mc-cliente_confirmou', r.cliente_confirmou);
+      set('mc-boleto_emitido', r.boleto_emitido); set('mc-boleto_pago', r.boleto_pago);
+      set('mc-data_quitacao', r.data_quitacao||'');
+      set('mc-devolvido_integrador', r.devolvido_integrador);
+      set('mc-devolvido_distribuidor', r.devolvido_distribuidor);
+      set('mc-status_integrador', r.status_integrador);
+      set('mc-perda', r.perda);                   set('mc-resultado', r.resultado);
+      set('mc-observacao', r.observacao);
+      set('mc-valor_projeto',              fmtBrl(r.valor_projeto));
+      set('mc-valor_boleto_quitacao',      fmtBrl(r.valor_boleto_quitacao));
+      set('mc-valor_nao_recuperado',       fmtBrl(r.valor_nao_recuperado));
+      set('mc-valor_pendente_distribuidor',fmtBrl(r.valor_pendente_distribuidor));
+      set('mc-valor_pendente_integrador',  fmtBrl(r.valor_pendente_integrador));
+    }
+
+    function fecharModalCancel() {
+      document.getElementById('modal-cancel').classList.add('hidden');
+      document.body.style.overflow = '';
+      editandoCancelId = null;
+    }
+
+    function calcularDiasRangeCancel() {
+      const dataStr = document.getElementById('mc-data_solicitacao').value;
+      if (!dataStr) return;
+      const dias = Math.floor((new Date() - new Date(dataStr + 'T00:00:00')) / 86400000);
+      document.getElementById('mc-dias_solicitacao').value = dias;
+      document.getElementById('mc-range_prazo').value =
+        dias <= 29  ? 'Range 01 - 29'
+      : dias <= 59  ? 'Range 30 - 59'
+      : dias <= 89  ? 'Range 60 - 89'
+      : dias <= 119 ? 'Range 90 - 119'
+      : dias <= 199 ? 'Range 120 - 199'
+      : 'Range 200 >';
+    }
+
+    async function salvarCancelamento() {
+      const btn    = document.getElementById('mc-btn-salvar');
+      const msgOk  = document.getElementById('mc-msg-ok');
+      const msgErr = document.getElementById('mc-msg-err');
+      btn.disabled = true; btn.textContent = '⏳ Salvando...';
+      msgOk.classList.add('hidden'); msgErr.classList.add('hidden');
+      try {
+        const g = id => document.getElementById(id);
+        const payload = {
+          numero_ordem:                g('mc-numero_ordem').value.trim()||null,
+          ccb:                         g('mc-ccb').value.trim()||null,
+          cliente:                     g('mc-cliente').value.trim()||null,
+          cpf_cnpj:                    g('mc-cpf_cnpj').value.trim()||null,
+          integrador:                  g('mc-integrador').value.trim()||null,
+          distribuidor:                g('mc-distribuidor').value.trim()||null,
+          data_assinatura_ccb:         g('mc-data_assinatura_ccb').value||null,
+          data_solicitacao:            g('mc-data_solicitacao').value||null,
+          dias_solicitacao:            parseInt(g('mc-dias_solicitacao').value)||null,
+          range_prazo:                 g('mc-range_prazo').value||null,
+          status:                      g('mc-status').value||null,
+          cliente_confirmou:           g('mc-cliente_confirmou').value||null,
+          boleto_emitido:              g('mc-boleto_emitido').value||null,
+          boleto_pago:                 g('mc-boleto_pago').value||null,
+          data_quitacao:               g('mc-data_quitacao').value||null,
+          valor_boleto_quitacao:       parseBRL(g('mc-valor_boleto_quitacao').value)||null,
+          devolvido_integrador:        g('mc-devolvido_integrador').value||null,
+          devolvido_distribuidor:      g('mc-devolvido_distribuidor').value||null,
+          status_integrador:           g('mc-status_integrador').value.trim()||null,
+          perda:                       g('mc-perda').value||null,
+          resultado:                   g('mc-resultado').value||null,
+          valor_projeto:               parseBRL(g('mc-valor_projeto').value)||null,
+          valor_nao_recuperado:        parseBRL(g('mc-valor_nao_recuperado').value)||null,
+          valor_pendente_distribuidor: parseBRL(g('mc-valor_pendente_distribuidor').value)||null,
+          valor_pendente_integrador:   parseBRL(g('mc-valor_pendente_integrador').value)||null,
+          observacao:                  g('mc-observacao').value.trim()||null,
+          updated_at:                  new Date().toISOString()
+        };
+        const { error } = editandoCancelId === null
+          ? await db.from('cancelamentos').insert(payload)
+          : await db.from('cancelamentos').update(payload).eq('id', editandoCancelId);
+        if (error) throw error;
+        msgOk.textContent = editandoCancelId ? '✅ Atualizado com sucesso!' : '✅ Caso criado com sucesso!';
+        msgOk.classList.remove('hidden');
+        cacheCancelamentos = [];
+        await carregarCancelamentos();
+        setTimeout(() => fecharModalCancel(), 1500);
+      } catch(err) {
+        msgErr.textContent = '❌ Erro: ' + (err.message || JSON.stringify(err));
+        msgErr.classList.remove('hidden');
+      } finally {
+        btn.disabled = false; btn.textContent = '💾 Salvar';
+      }
+    }
+
+    function exportarExcelCancelamentos() {
+      if (!filtradosCancel.length) { alert('Nenhum registro para exportar.'); return; }
+      const linhas = filtradosCancel.map(r => ({
+        'Nº Ordem':                     r.numero_ordem||'',
+        'CCB':                          r.ccb||'',
+        'Cliente':                      r.cliente||'',
+        // CPF/CNPJ omitido — LGPD
+        'Integrador':                   r.integrador||'',
+        'Distribuidor':                 r.distribuidor||'',
+        'Data Assinatura CCB':          r.data_assinatura_ccb||'',
+        'Data Solicitação':             r.data_solicitacao||'',
+        'Dias':                         r.dias_solicitacao||'',
+        'Range':                        r.range_prazo||'',
+        'Status':                       r.status||'',
+        'Cliente Confirmou':            r.cliente_confirmou||'',
+        'Boleto Emitido':               r.boleto_emitido||'',
+        'Boleto Pago':                  r.boleto_pago||'',
+        'Data Quitação':                r.data_quitacao||'',
+        'Valor Boleto Quitação (R$)':   r.valor_boleto_quitacao||0,
+        'Devolvido Integrador':         r.devolvido_integrador||'',
+        'Devolvido Distribuidor':       r.devolvido_distribuidor||'',
+        'Status Integrador':            r.status_integrador||'',
+        'Perda':                        r.perda||'',
+        'Resultado':                    r.resultado||'',
+        'Valor Projeto (R$)':           r.valor_projeto||0,
+        'Valor Não Recuperado (R$)':    r.valor_nao_recuperado||0,
+        'Valor Pendente Distribuidor':  r.valor_pendente_distribuidor||0,
+        'Valor Pendente Integrador':    r.valor_pendente_integrador||0,
+        'Observação':                   r.observacao||'',
+      }));
+      const ws = XLSX.utils.json_to_sheet(linhas);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Cancelamentos');
+      ws['!cols'] = Object.keys(linhas[0]).map(k => ({ wch: Math.max(k.length, 12) }));
+      XLSX.writeFile(wb, `cancelamentos-${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.xlsx`);
     }
 
     // ── Exportar Excel ────────────────────────────────────────────
