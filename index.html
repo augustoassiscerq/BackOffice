@@ -1407,7 +1407,7 @@
 
       const { data, error } = await db
         .from('cancelamentos').select('*')
-        .order('dias_solicitacao', { ascending: false }).limit(5000);
+        .order('id', { ascending: false }).limit(5000);
 
       document.getElementById('cancel-loading').classList.add('hidden');
       if (error) {
