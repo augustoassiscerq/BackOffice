@@ -1380,6 +1380,16 @@
     let editandoCancelId   = null;
     let abaCancel          = 'cancelamentos'; // 'cancelamentos' | 'resolve'
 
+    // Regra de negócio: um caso pertence à aba Resolve se o status começa
+    // com "Resolve" OU se o integrador/distribuidor é a empresa Resolve ou R C Viegas
+    function isResolveCase(r) {
+      if ((r.status||'').startsWith('Resolve')) return true;
+      const int  = (r.integrador   ||'').toUpperCase();
+      const dist = (r.distribuidor ||'').toUpperCase();
+      return int.includes('RESOLVE ENERGIA') || dist.includes('RESOLVE ENERGIA')
+          || int.includes('R C VIEGAS')      || dist.includes('R C VIEGAS');
+    }
+
     function switchAbaCancel(aba) {
       abaCancel = aba;
       const abaAtivo   = 'px-5 py-3 text-sm font-semibold border-b-2 border-green-600 text-green-700 transition-all';
@@ -1425,10 +1435,9 @@
       const intFilt= document.getElementById('cf-integrador').value.toLowerCase();
 
       // Base da aba: filtra só por aba (sem busca/range/etc) → base dos KPIs
-      const baseAba = cacheCancelamentos.filter(r => {
-        const isResolve = (r.status||'').startsWith('Resolve');
-        return abaCancel === 'resolve' ? isResolve : !isResolve;
-      });
+      const baseAba = cacheCancelamentos.filter(r =>
+        abaCancel === 'resolve' ? isResolveCase(r) : !isResolveCase(r)
+      );
       atualizarKpisCancel(baseAba);
 
       filtradosCancel = baseAba.filter(r => {
