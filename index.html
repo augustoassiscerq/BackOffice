@@ -41,8 +41,6 @@
           class="px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all">⚠️ Cancelamentos</button>
         <button id="btn-analise" onclick="mostrarView('analise')"
           class="px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all">📊 Análise</button>
-        <button id="btn-oc" onclick="mostrarView('oc')"
-          class="px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all">📑 OCs</button>
       </nav>
     </div>
   </header>
@@ -926,7 +924,8 @@
       const inativo = 'px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all';
       ['calc', 'hist', 'cancel', 'analise', 'oc'].forEach(v => {
         document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
-        document.getElementById('btn-'  + v).className = v === view ? ativo : inativo;
+        const btn = document.getElementById('btn-' + v);
+        if (btn) btn.className = v === view ? ativo : inativo;
       });
       if (view === 'hist'   && cache.length === 0)              carregarHistorico();
       if (view === 'cancel' && cacheCancelamentos.length === 0) carregarCancelamentos();
