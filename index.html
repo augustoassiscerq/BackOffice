@@ -39,6 +39,10 @@
           class="px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all">📋 Histórico</button>
         <button id="btn-cancel" onclick="mostrarView('cancel')"
           class="px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all">⚠️ Cancelamentos</button>
+        <button id="btn-analise" onclick="mostrarView('analise')"
+          class="px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all">📊 Análise</button>
+        <button id="btn-oc" onclick="mostrarView('oc')"
+          class="px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all">📑 OCs</button>
       </nav>
     </div>
   </header>
@@ -468,6 +472,122 @@
     </div>
   </div>
 
+  <!-- VIEW: ANÁLISE -->
+  <div id="view-analise" class="hidden max-w-7xl mx-auto px-4 py-6 space-y-5">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-gray-800">Análise de Cancelamentos</h1>
+        <p class="text-xs text-gray-400 mt-0.5">Visão consolidada de todos os casos</p>
+      </div>
+      <button onclick="carregarAnalise()" class="text-sm text-green-600 hover:text-green-700 font-semibold">↺ Atualizar</button>
+    </div>
+    <!-- KPIs -->
+    <div id="analise-kpis" class="grid grid-cols-4 gap-4"></div>
+    <!-- Barras -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Distribuição por Range</h3>
+        <div id="analise-range" class="space-y-3"></div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Top Status</h3>
+        <div id="analise-status" class="space-y-3"></div>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Top Integradores</h3>
+        <div id="analise-integradores" class="space-y-3"></div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Top Distribuidores</h3>
+        <div id="analise-distribuidores" class="space-y-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW: OCs -->
+  <div id="view-oc" class="hidden max-w-4xl mx-auto px-4 py-6 space-y-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-gray-800">Ordens de Compra</h1>
+        <p class="text-xs text-gray-400 mt-0.5">Acompanhe as OCs de quitação vinculadas a cancelamentos</p>
+      </div>
+      <button onclick="abrirModalOC()"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">+ Nova OC</button>
+    </div>
+    <!-- KPIs OC -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="bg-white rounded-xl border border-orange-200 shadow-sm p-4">
+        <p class="text-xs font-semibold text-orange-400 uppercase tracking-widest mb-1">OCs Abertas</p>
+        <p id="oc-kpi-abertas" class="text-3xl font-bold text-orange-600">—</p>
+      </div>
+      <div class="bg-white rounded-xl border border-green-200 shadow-sm p-4">
+        <p class="text-xs font-semibold text-green-400 uppercase tracking-widest mb-1">OCs Pagas</p>
+        <p id="oc-kpi-pagas" class="text-3xl font-bold text-green-600">—</p>
+      </div>
+      <div class="bg-white rounded-xl border border-blue-200 shadow-sm p-4">
+        <p class="text-xs font-semibold text-blue-400 uppercase tracking-widest mb-1">Valor Total</p>
+        <p id="oc-kpi-valor" class="text-2xl font-bold text-blue-600">—</p>
+      </div>
+    </div>
+    <div id="oc-loading" class="text-center py-16 text-gray-400 text-sm">⏳ Carregando...</div>
+    <div id="oc-vazio"   class="hidden text-center py-16 text-gray-400 text-sm">📭 Nenhuma OC cadastrada.</div>
+    <div id="oc-lista"   class="hidden space-y-3"></div>
+  </div>
+
+  <!-- MODAL: Nova OC -->
+  <div id="modal-oc" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <h2 class="text-base font-bold text-gray-800">Nova Ordem de Compra</h2>
+        <button onclick="fecharModalOC()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+      </div>
+      <div class="px-6 py-4 space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Número da OC <span class="text-red-500">*</span></label>
+          <input id="oc-numero" type="text" placeholder="Ex.: OC-2024-001"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">CCBs vinculadas <span class="text-red-500">*</span></label>
+          <textarea id="oc-ccbs" rows="4" placeholder="Um número de CCB por linha&#10;Ex.:&#10;12345678&#10;87654321"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"></textarea>
+          <p class="text-xs text-gray-400 mt-1">Um número de CCB por linha</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Valor de Quitação (R$)</label>
+            <input id="oc-valor" type="text" placeholder="0,00"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              oninput="maskBRL(this)" onpaste="pasteBRL(event, this)">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Quitação</label>
+            <select id="oc-tipo"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">— Selecione —</option>
+              <option>Valor Presente</option>
+              <option>Valor do Projeto</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Observação</label>
+          <textarea id="oc-obs" rows="2"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+        </div>
+        <p id="oc-msg-err" class="hidden text-xs text-red-600 bg-red-50 rounded-lg py-2 px-3"></p>
+      </div>
+      <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
+        <button onclick="fecharModalOC()"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+        <button id="oc-btn-salvar" onclick="criarOC()"
+          class="px-6 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors">💾 Criar OC</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: Cancelamento -->
   <div id="modal-cancel" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
@@ -792,12 +912,14 @@
     function mostrarView(view) {
       const ativo   = 'px-5 py-4 text-sm tab-ativo border-b-2 transition-all';
       const inativo = 'px-5 py-4 text-sm text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-all';
-      ['calc', 'hist', 'cancel'].forEach(v => {
+      ['calc', 'hist', 'cancel', 'analise', 'oc'].forEach(v => {
         document.getElementById('view-' + v).classList.toggle('hidden', v !== view);
         document.getElementById('btn-'  + v).className = v === view ? ativo : inativo;
       });
-      if (view === 'hist'   && cache.length === 0)               carregarHistorico();
-      if (view === 'cancel' && cacheCancelamentos.length === 0)  carregarCancelamentos();
+      if (view === 'hist'   && cache.length === 0)              carregarHistorico();
+      if (view === 'cancel' && cacheCancelamentos.length === 0) carregarCancelamentos();
+      if (view === 'analise') carregarAnalise();
+      if (view === 'oc'     && cacheOCs.length === 0)           carregarOCs();
     }
 
     // ── Máscara BRL ───────────────────────────────────────────────
@@ -1875,6 +1997,265 @@
 
       const data = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
       XLSX.writeFile(wb, `historico-sol-agora-${data}.xlsx`);
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ── ANÁLISE ───────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════
+    async function carregarAnalise() {
+      if (cacheCancelamentos.length === 0) await carregarCancelamentos();
+      renderizarAnalise();
+    }
+
+    function barRow(label, count, total, cls) {
+      const pct = total > 0 ? Math.round(count / total * 100) : 0;
+      return `<div>
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-gray-600 truncate max-w-[220px]" title="${esc(label)}">${esc(label)}</span>
+          <span class="text-gray-500 font-medium ml-2 whitespace-nowrap">${count} <span class="text-gray-300">(${pct}%)</span></span>
+        </div>
+        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full ${cls} rounded-full" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+    }
+
+    function renderizarAnalise() {
+      const d = cacheCancelamentos;
+      const total = d.length;
+
+      // ── KPIs
+      const totalValor    = d.reduce((s, r) => s + (r.valor_projeto || 0), 0);
+      const recuperados   = d.filter(r => { const s=(r.status||'').toLowerCase(); return s.includes('recuperado')||s.includes('resolve'); }).length;
+      const emPerda       = d.filter(r => r.perda === 'SIM').length;
+      const valorRecup    = d.reduce((s, r) => s + (r.valor_boleto_quitacao || 0), 0);
+      document.getElementById('analise-kpis').innerHTML = `
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Total de Casos</p>
+          <p class="text-3xl font-bold text-gray-800">${total}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-green-200 shadow-sm p-4">
+          <p class="text-xs font-semibold text-green-400 uppercase tracking-widest mb-1">Recuperados</p>
+          <p class="text-3xl font-bold text-green-600">${recuperados}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+          <p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Em Perda</p>
+          <p class="text-3xl font-bold text-red-600">${emPerda}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-blue-200 shadow-sm p-4">
+          <p class="text-xs font-semibold text-blue-400 uppercase tracking-widest mb-1">Valor Recuperado</p>
+          <p class="text-xl font-bold text-blue-600">${brl(valorRecup)}</p>
+          <p class="text-xs text-gray-400 mt-0.5">de ${brl(totalValor)} em projetos</p>
+        </div>`;
+
+      // ── Range
+      const ranges = [
+        ['Range 01 - 29',   'bg-green-500'],
+        ['Range 30 - 59',   'bg-yellow-400'],
+        ['Range 60 - 89',   'bg-orange-400'],
+        ['Range 90 - 119',  'bg-red-400'],
+        ['Range 120 - 199', 'bg-red-600'],
+        ['Range 200 >',     'bg-red-800'],
+      ];
+      document.getElementById('analise-range').innerHTML =
+        ranges.map(([r, cls]) => barRow(r, d.filter(x => x.range_prazo === r).length, total, cls)).join('');
+
+      // ── Status (top 10)
+      const statusMap = {};
+      d.forEach(r => { const s = r.status||'(sem status)'; statusMap[s]=(statusMap[s]||0)+1; });
+      const topStatus = Object.entries(statusMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      document.getElementById('analise-status').innerHTML =
+        topStatus.map(([s, c]) => barRow(s, c, total, 'bg-blue-400')).join('');
+
+      // ── Integradores (top 10)
+      const intMap = {};
+      d.forEach(r => { const k=r.integrador||'(sem integrador)'; intMap[k]=(intMap[k]||0)+1; });
+      const topInt  = Object.entries(intMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      const maxInt  = topInt[0]?.[1] || 1;
+      document.getElementById('analise-integradores').innerHTML =
+        topInt.map(([n, c]) => barRow(n, c, maxInt, 'bg-purple-400')).join('');
+
+      // ── Distribuidores (top 10)
+      const distMap = {};
+      d.forEach(r => { const k=r.distribuidor||'(sem distribuidor)'; distMap[k]=(distMap[k]||0)+1; });
+      const topDist = Object.entries(distMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      const maxDist = topDist[0]?.[1] || 1;
+      document.getElementById('analise-distribuidores').innerHTML =
+        topDist.map(([n, c]) => barRow(n, c, maxDist, 'bg-teal-400')).join('');
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // ── ORDENS DE COMPRA ──────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════
+    let cacheOCs = [];
+
+    function abrirModalOC() {
+      ['oc-numero','oc-ccbs','oc-valor','oc-obs'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('oc-tipo').value = '';
+      document.getElementById('oc-msg-err').classList.add('hidden');
+      document.getElementById('oc-btn-salvar').disabled = false;
+      document.getElementById('oc-btn-salvar').textContent = '💾 Criar OC';
+      document.getElementById('modal-oc').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function fecharModalOC() {
+      document.getElementById('modal-oc').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    async function carregarOCs() {
+      document.getElementById('oc-loading').classList.remove('hidden');
+      document.getElementById('oc-lista').classList.add('hidden');
+      document.getElementById('oc-vazio').classList.add('hidden');
+
+      const { data, error } = await db.from('ordens_compra').select('*').order('created_at', { ascending: false });
+      document.getElementById('oc-loading').classList.add('hidden');
+      if (error) {
+        document.getElementById('oc-loading').textContent = '❌ Erro: ' + error.message;
+        document.getElementById('oc-loading').classList.remove('hidden');
+        return;
+      }
+      cacheOCs = data || [];
+      renderizarOCs();
+    }
+
+    function renderizarOCs() {
+      const abertas = cacheOCs.filter(o => !o.pago).length;
+      const pagas   = cacheOCs.filter(o =>  o.pago).length;
+      const valor   = cacheOCs.reduce((s, o) => s + (o.valor_quitacao || 0), 0);
+      document.getElementById('oc-kpi-abertas').textContent = abertas;
+      document.getElementById('oc-kpi-pagas').textContent   = pagas;
+      document.getElementById('oc-kpi-valor').textContent   = brl(valor);
+
+      if (!cacheOCs.length) {
+        document.getElementById('oc-vazio').classList.remove('hidden');
+        return;
+      }
+      document.getElementById('oc-lista').classList.remove('hidden');
+      document.getElementById('oc-lista').innerHTML = cacheOCs.map(o => {
+        const ccbs      = (o.ccbs || []).join(' · ');
+        const dt        = new Date(o.created_at).toLocaleDateString('pt-BR');
+        const pagoClass = o.pago ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
+        const pagoTxt   = o.pago ? '✓ Paga' : '⏳ Pendente';
+        return `<div class="bg-white rounded-xl border ${o.pago ? 'border-green-200' : 'border-orange-200'} shadow-sm p-5">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap mb-2">
+                <span class="text-base font-bold text-gray-800">${esc(o.numero_oc)}</span>
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${pagoClass}">${pagoTxt}</span>
+                ${o.tipo_quitacao ? `<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">${esc(o.tipo_quitacao)}</span>` : ''}
+              </div>
+              <p class="text-xs text-gray-500 mb-1">
+                <span class="font-medium text-gray-600">CCBs:</span>
+                <span class="font-mono ml-1">${esc(ccbs) || '—'}</span>
+              </p>
+              ${o.observacao ? `<p class="text-xs text-gray-400 italic mt-1">${esc(o.observacao)}</p>` : ''}
+              <p class="text-xs text-gray-300 mt-2">Criada em ${dt}</p>
+            </div>
+            <div class="text-right flex-shrink-0 space-y-2">
+              <p class="text-xl font-bold text-gray-800">${o.valor_quitacao ? brl(o.valor_quitacao) : '—'}</p>
+              ${!o.pago
+                ? `<button onclick="marcarOCPaga(${o.id})"
+                    class="block w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors">
+                    ✓ Marcar como Paga
+                  </button>`
+                : `<button onclick="desmarcarOCPaga(${o.id})"
+                    class="block w-full px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 text-gray-500 hover:text-red-500 transition-colors">
+                    ↩ Desfazer pagamento
+                  </button>`
+              }
+              <button onclick="excluirOC(${o.id})"
+                class="block w-full text-xs text-red-400 hover:text-red-600 transition-colors pt-1">Excluir OC</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function criarOC() {
+      const btn    = document.getElementById('oc-btn-salvar');
+      const msgErr = document.getElementById('oc-msg-err');
+      msgErr.classList.add('hidden');
+
+      const numero  = document.getElementById('oc-numero').value.trim();
+      const ccbsRaw = document.getElementById('oc-ccbs').value;
+      const valor   = parseBRL(document.getElementById('oc-valor').value);
+      const tipo    = document.getElementById('oc-tipo').value;
+      const obs     = document.getElementById('oc-obs').value.trim();
+
+      if (!numero) { msgErr.textContent = 'Informe o número da OC.'; msgErr.classList.remove('hidden'); return; }
+      const ccbs = ccbsRaw.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
+      if (!ccbs.length) { msgErr.textContent = 'Informe pelo menos uma CCB.'; msgErr.classList.remove('hidden'); return; }
+
+      btn.disabled = true; btn.textContent = '⏳ Salvando...';
+      try {
+        // 1. Inserir OC
+        const { error: ocErr } = await db.from('ordens_compra').insert({
+          numero_oc: numero, ccbs, valor_quitacao: valor || null,
+          tipo_quitacao: tipo || null, observacao: obs || null
+        });
+        if (ocErr) throw ocErr;
+
+        // 2. Atualizar cancelamentos vinculados
+        btn.textContent = '⏳ Atualizando CCBs...';
+        for (const ccb of ccbs) {
+          await db.from('cancelamentos').update({
+            numero_oc: numero,
+            valor_boleto_quitacao: valor || null,
+            boleto_emitido: 'Sim',
+            updated_at: new Date().toISOString()
+          }).eq('ccb', ccb);
+        }
+
+        fecharModalOC();
+        cacheCancelamentos = [];
+        await carregarOCs();
+      } catch (err) {
+        msgErr.textContent = '❌ Erro: ' + (err.message || JSON.stringify(err));
+        msgErr.classList.remove('hidden');
+        btn.disabled = false; btn.textContent = '💾 Criar OC';
+      }
+    }
+
+    async function marcarOCPaga(id) {
+      const oc = cacheOCs.find(o => o.id === id);
+      if (!oc) return;
+      if (!confirm(`Marcar a OC "${oc.numero_oc}" como PAGA?\n\nIsso vai atualizar o campo "Boleto Pago" de todas as CCBs vinculadas.`)) return;
+      try {
+        await db.from('ordens_compra').update({ pago: true, updated_at: new Date().toISOString() }).eq('id', id);
+        for (const ccb of (oc.ccbs || [])) {
+          await db.from('cancelamentos').update({ boleto_pago: 'Sim', updated_at: new Date().toISOString() }).eq('ccb', ccb);
+        }
+        cacheCancelamentos = [];
+        await carregarOCs();
+      } catch (err) { alert('Erro: ' + err.message); }
+    }
+
+    async function desmarcarOCPaga(id) {
+      const oc = cacheOCs.find(o => o.id === id);
+      if (!oc) return;
+      if (!confirm(`Desfazer pagamento da OC "${oc.numero_oc}"?\n\nO campo "Boleto Pago" das CCBs vinculadas será revertido para "Não".`)) return;
+      try {
+        await db.from('ordens_compra').update({ pago: false, updated_at: new Date().toISOString() }).eq('id', id);
+        for (const ccb of (oc.ccbs || [])) {
+          await db.from('cancelamentos').update({ boleto_pago: 'Não', updated_at: new Date().toISOString() }).eq('ccb', ccb);
+        }
+        cacheCancelamentos = [];
+        await carregarOCs();
+      } catch (err) { alert('Erro: ' + err.message); }
+    }
+
+    async function excluirOC(id) {
+      const oc = cacheOCs.find(o => o.id === id);
+      if (!oc) return;
+      if (!confirm(`Excluir a OC "${oc.numero_oc}"?\n\nOs dados das CCBs vinculadas não serão revertidos.`)) return;
+      try {
+        const { error } = await db.from('ordens_compra').delete().eq('id', id);
+        if (error) throw error;
+        cacheOCs = cacheOCs.filter(o => o.id !== id);
+        renderizarOCs();
+      } catch (err) { alert('Erro: ' + err.message); }
     }
   </script>
 </body>
