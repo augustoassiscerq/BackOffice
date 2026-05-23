@@ -622,11 +622,13 @@
               <!-- Integrador -->
               <div class="border border-dashed border-gray-300 rounded-lg p-3 space-y-2">
                 <label class="block text-xs font-semibold text-gray-600">Integrador</label>
-                <div id="mc-link-integrador" class="hidden">
+                <div id="mc-link-integrador" class="hidden flex items-center gap-2">
                   <a id="mc-link-integrador-a" href="#" target="_blank"
                     class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium">
                     📎 Ver comprovante anexado
                   </a>
+                  <button type="button" onclick="excluirComprovante('integrador')"
+                    class="text-xs text-red-500 hover:text-red-700 font-medium transition-colors">✕ Excluir</button>
                 </div>
                 <input id="mc-file-integrador" type="file" accept=".pdf,.jpg,.jpeg,.png"
                   class="w-full text-xs text-gray-500
@@ -638,11 +640,13 @@
               <!-- Distribuidor -->
               <div class="border border-dashed border-gray-300 rounded-lg p-3 space-y-2">
                 <label class="block text-xs font-semibold text-gray-600">Distribuidor</label>
-                <div id="mc-link-distribuidor" class="hidden">
+                <div id="mc-link-distribuidor" class="hidden flex items-center gap-2">
                   <a id="mc-link-distribuidor-a" href="#" target="_blank"
                     class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium">
                     📎 Ver comprovante anexado
                   </a>
+                  <button type="button" onclick="excluirComprovante('distribuidor')"
+                    class="text-xs text-red-500 hover:text-red-700 font-medium transition-colors">✕ Excluir</button>
                 </div>
                 <input id="mc-file-distribuidor" type="file" accept=".pdf,.jpg,.jpeg,.png"
                   class="w-full text-xs text-gray-500
@@ -1666,6 +1670,43 @@
         : d <= 119 ? 'Range 90 - 119'
         : d <= 199 ? 'Range 120 - 199'
         : 'Range 200 >';
+      }
+    }
+
+    // Exclui o comprovante do storage e zera a coluna no banco
+    async function excluirComprovante(tipo) {
+      if (!editandoCancelId) return;
+      if (!confirm(`Excluir o comprovante do ${tipo}? Esta ação não pode ser desfeita.`)) return;
+
+      const col    = `comprovante_${tipo}`;
+      const linkEl = document.getElementById(`mc-link-${tipo}`);
+      const anchor = document.getElementById(`mc-link-${tipo}-a`);
+
+      try {
+        // Extrair o path relativo da URL pública para excluir do storage
+        const url = anchor.href;
+        const marker = '/object/public/comprovantes/';
+        const idx = url.indexOf(marker);
+        if (idx !== -1) {
+          const path = decodeURIComponent(url.slice(idx + marker.length));
+          await db.storage.from('comprovantes').remove([path]);
+        }
+
+        // Zerar coluna no banco
+        const { error } = await db.from('cancelamentos')
+          .update({ [col]: null }).eq('id', editandoCancelId);
+        if (error) throw error;
+
+        // Atualizar UI
+        linkEl.classList.add('hidden');
+        anchor.href = '#';
+        document.getElementById(`mc-file-${tipo}`).value = '';
+
+        // Atualizar cache local
+        const rec = cacheCancelamentos.find(x => x.id === editandoCancelId);
+        if (rec) rec[col] = null;
+      } catch (err) {
+        alert('Erro ao excluir: ' + (err.message || JSON.stringify(err)));
       }
     }
 
