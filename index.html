@@ -367,6 +367,18 @@
   <!-- VIEW: CANCELAMENTOS -->
   <div id="view-cancel" class="hidden max-w-7xl mx-auto px-4 py-6 space-y-4">
 
+    <!-- Sub-abas -->
+    <div class="flex border-b border-gray-200 bg-white rounded-t-xl px-4">
+      <button id="aba-cancelamentos" onclick="switchAbaCancel('cancelamentos')"
+        class="px-5 py-3 text-sm font-semibold border-b-2 border-green-600 text-green-700 transition-all">
+        Cancelamentos
+      </button>
+      <button id="aba-resolve" onclick="switchAbaCancel('resolve')"
+        class="px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-800 transition-all">
+        Resolve
+      </button>
+    </div>
+
     <!-- KPIs -->
     <div class="grid grid-cols-4 gap-4">
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
@@ -490,7 +502,8 @@
             <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Datas e Prazo</p>
             <div class="grid grid-cols-4 gap-3">
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Data Assinatura CCB</label>
-                <input id="mc-data_assinatura_ccb" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+                <input id="mc-data_assinatura_ccb" type="date" onchange="calcularDiasRangeCancel()"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Data da Solicitação</label>
                 <input id="mc-data_solicitacao" type="date" onchange="calcularDiasRangeCancel()"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
@@ -1365,6 +1378,16 @@
     let paginaCancel       = 1;
     const POR_PAGINA_CANCEL = 50;
     let editandoCancelId   = null;
+    let abaCancel          = 'cancelamentos'; // 'cancelamentos' | 'resolve'
+
+    function switchAbaCancel(aba) {
+      abaCancel = aba;
+      const abaAtivo   = 'px-5 py-3 text-sm font-semibold border-b-2 border-green-600 text-green-700 transition-all';
+      const abaInativo = 'px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-800 transition-all';
+      document.getElementById('aba-cancelamentos').className = aba === 'cancelamentos' ? abaAtivo : abaInativo;
+      document.getElementById('aba-resolve').className       = aba === 'resolve'        ? abaAtivo : abaInativo;
+      filtrarCancelamentos();
+    }
 
     async function carregarCancelamentos() {
       document.getElementById('cancel-loading').classList.remove('hidden');
@@ -1403,6 +1426,10 @@
       const intFilt= document.getElementById('cf-integrador').value.toLowerCase();
 
       filtradosCancel = cacheCancelamentos.filter(r => {
+        // Filtro de aba: Resolve = status começa com "Resolve"
+        const isResolve = (r.status||'').startsWith('Resolve');
+        if (abaCancel === 'resolve'       && !isResolve) return false;
+        if (abaCancel === 'cancelamentos' &&  isResolve) return false;
         if (busca  && !((r.ccb||'').toLowerCase().includes(busca)||(r.cliente||'').toLowerCase().includes(busca))) return false;
         if (stFilt && !(r.status||'').toLowerCase().includes(stFilt)) return false;
         if (perdaF && r.perda !== perdaF) return false;
@@ -1470,10 +1497,13 @@
 
     function getRangeClsCancel(r) {
       if (!r) return 'bg-gray-100 text-gray-500';
-      if (r.includes('01 - 29'))  return 'bg-green-100 text-green-700';
-      if (r.includes('30 - 59'))  return 'bg-yellow-100 text-yellow-700';
-      if (r.includes('60') || r.includes('90')) return 'bg-orange-100 text-orange-700';
-      return 'bg-red-100 text-red-700';
+      if (r === 'Range 01 - 29')  return 'bg-green-100 text-green-700';
+      if (r === 'Range 30 - 59')  return 'bg-yellow-100 text-yellow-700';
+      if (r === 'Range 60 - 89')  return 'bg-orange-100 text-orange-700';
+      if (r === 'Range 90 - 119') return 'bg-red-100 text-red-600';
+      if (r === 'Range 120 - 199')return 'bg-red-200 text-red-700';
+      if (r === 'Range 200 >')    return 'bg-red-300 text-red-800';
+      return 'bg-gray-100 text-gray-500';
     }
 
     function renderizarPaginacaoCancel(totalPags) {
@@ -1551,17 +1581,24 @@
     }
 
     function calcularDiasRangeCancel() {
-      const dataStr = document.getElementById('mc-data_solicitacao').value;
-      if (!dataStr) return;
-      const dias = Math.floor((new Date() - new Date(dataStr + 'T00:00:00')) / 86400000);
-      document.getElementById('mc-dias_solicitacao').value = dias;
-      document.getElementById('mc-range_prazo').value =
-        dias <= 29  ? 'Range 01 - 29'
-      : dias <= 59  ? 'Range 30 - 59'
-      : dias <= 89  ? 'Range 60 - 89'
-      : dias <= 119 ? 'Range 90 - 119'
-      : dias <= 199 ? 'Range 120 - 199'
-      : 'Range 200 >';
+      // Dias de solicitação: da data da solicitação até hoje
+      const dataSolic = document.getElementById('mc-data_solicitacao').value;
+      if (dataSolic) {
+        const dias = Math.floor((new Date() - new Date(dataSolic + 'T00:00:00')) / 86400000);
+        document.getElementById('mc-dias_solicitacao').value = dias;
+      }
+      // Range: calculado pela data de assinatura da CCB
+      const dataCCB = document.getElementById('mc-data_assinatura_ccb').value;
+      if (dataCCB) {
+        const d = Math.floor((new Date() - new Date(dataCCB + 'T00:00:00')) / 86400000);
+        document.getElementById('mc-range_prazo').value =
+          d <= 29  ? 'Range 01 - 29'
+        : d <= 59  ? 'Range 30 - 59'
+        : d <= 89  ? 'Range 60 - 89'
+        : d <= 119 ? 'Range 90 - 119'
+        : d <= 199 ? 'Range 120 - 199'
+        : 'Range 200 >';
+      }
     }
 
     async function salvarCancelamento() {
