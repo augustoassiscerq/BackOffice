@@ -445,19 +445,19 @@
       <div id="cancel-loading" class="text-center py-16 text-gray-400 text-sm">⏳ Carregando...</div>
       <div id="cancel-vazio"   class="hidden text-center py-16 text-gray-400 text-sm">📭 Nenhum caso encontrado.</div>
       <div id="cancel-tabela"  class="hidden overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full min-w-max text-sm">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
               <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Nº Ordem</th>
-              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">CCB</th>
-              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cliente</th>
-              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Integrador</th>
-              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Distribuidor</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">CCB</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide min-w-[180px]">Cliente</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide min-w-[160px]">Integrador</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide min-w-[160px]">Distribuidor</th>
               <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Data Solic.</th>
-              <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Dias</th>
-              <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Range</th>
-              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-              <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Perda</th>
+              <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Dias</th>
+              <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Range</th>
+              <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide min-w-[200px]">Status</th>
+              <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Perda</th>
               <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Valor Projeto</th>
             </tr>
           </thead>
@@ -1406,16 +1406,15 @@
         return;
       }
       cacheCancelamentos = data || [];
-      atualizarKpisCancel();
-      filtrarCancelamentos();
+      filtrarCancelamentos(); // já chama atualizarKpisCancel internamente
     }
 
-    function atualizarKpisCancel() {
-      const d = cacheCancelamentos;
-      document.getElementById('kpi-total').textContent      = d.length;
-      document.getElementById('kpi-pendentes').textContent  = d.filter(r => (r.status||'').toLowerCase().includes('pendente')).length;
-      document.getElementById('kpi-recuperados').textContent= d.filter(r => { const s=(r.status||'').toLowerCase(); return s.includes('recuperado')||s.includes('resolve'); }).length;
-      document.getElementById('kpi-perda').textContent      = d.filter(r => r.perda === 'SIM').length;
+    function atualizarKpisCancel(base) {
+      // base = casos já filtrados pela aba (sem filtros de busca/range/etc)
+      document.getElementById('kpi-total').textContent      = base.length;
+      document.getElementById('kpi-pendentes').textContent  = base.filter(r => (r.status||'').toLowerCase().includes('pendente')).length;
+      document.getElementById('kpi-recuperados').textContent= base.filter(r => { const s=(r.status||'').toLowerCase(); return s.includes('recuperado')||s.includes('resolve'); }).length;
+      document.getElementById('kpi-perda').textContent      = base.filter(r => r.perda === 'SIM').length;
     }
 
     function filtrarCancelamentos() {
@@ -1425,11 +1424,14 @@
       const rangeF = document.getElementById('cf-range').value;
       const intFilt= document.getElementById('cf-integrador').value.toLowerCase();
 
-      filtradosCancel = cacheCancelamentos.filter(r => {
-        // Filtro de aba: Resolve = status começa com "Resolve"
+      // Base da aba: filtra só por aba (sem busca/range/etc) → base dos KPIs
+      const baseAba = cacheCancelamentos.filter(r => {
         const isResolve = (r.status||'').startsWith('Resolve');
-        if (abaCancel === 'resolve'       && !isResolve) return false;
-        if (abaCancel === 'cancelamentos' &&  isResolve) return false;
+        return abaCancel === 'resolve' ? isResolve : !isResolve;
+      });
+      atualizarKpisCancel(baseAba);
+
+      filtradosCancel = baseAba.filter(r => {
         if (busca  && !((r.ccb||'').toLowerCase().includes(busca)||(r.cliente||'').toLowerCase().includes(busca))) return false;
         if (stFilt && !(r.status||'').toLowerCase().includes(stFilt)) return false;
         if (perdaF && r.perda !== perdaF) return false;
@@ -1469,17 +1471,17 @@
         const dt = r.data_solicitacao
           ? new Date(r.data_solicitacao + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
         return `<tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="abrirModalCancel(${r.id})">
-          <td class="px-3 py-2.5 text-xs text-gray-400">${esc(r.numero_ordem||'—')}</td>
-          <td class="px-3 py-2.5 text-sm font-mono font-semibold text-gray-800">${esc(r.ccb||'—')}</td>
+          <td class="px-3 py-2.5 text-xs text-gray-400 whitespace-nowrap">${esc(r.numero_ordem||'—')}</td>
+          <td class="px-3 py-2.5 text-sm font-mono font-semibold text-gray-800 whitespace-nowrap">${esc(r.ccb||'—')}</td>
           <td class="px-3 py-2.5 text-sm text-gray-800">${esc(r.cliente||'—')}</td>
           <td class="px-3 py-2.5 text-xs text-gray-600">${esc(r.integrador||'—')}</td>
           <td class="px-3 py-2.5 text-xs text-gray-600">${esc(r.distribuidor||'—')}</td>
           <td class="px-3 py-2.5 text-xs text-gray-400 whitespace-nowrap">${dt}</td>
-          <td class="px-3 py-2.5 text-center text-sm ${diasCls}">${r.dias_solicitacao??'—'}</td>
-          <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${rgCls}">${esc(r.range_prazo||'—')}</span></td>
+          <td class="px-3 py-2.5 text-center text-sm whitespace-nowrap ${diasCls}">${r.dias_solicitacao??'—'}</td>
+          <td class="px-3 py-2.5 text-center whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${rgCls}">${esc(r.range_prazo||'—')}</span></td>
           <td class="px-3 py-2.5"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${stCls}">${esc(r.status||'—')}</span></td>
-          <td class="px-3 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${perdaCls}">${esc(r.perda||'—')}</span></td>
-          <td class="px-3 py-2.5 text-sm text-right text-gray-700">${r.valor_projeto ? brl(r.valor_projeto) : '—'}</td>
+          <td class="px-3 py-2.5 text-center whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${perdaCls}">${esc(r.perda||'—')}</span></td>
+          <td class="px-3 py-2.5 text-sm text-right text-gray-700 whitespace-nowrap">${r.valor_projeto ? brl(r.valor_projeto) : '—'}</td>
         </tr>`;
       }).join('');
 
