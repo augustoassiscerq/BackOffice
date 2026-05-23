@@ -615,6 +615,45 @@
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"></textarea>
           </div>
 
+          <!-- Comprovantes de Devolução -->
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Comprovantes de Devolução (PIX / TED)</p>
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Integrador -->
+              <div class="border border-dashed border-gray-300 rounded-lg p-3 space-y-2">
+                <label class="block text-xs font-semibold text-gray-600">Integrador</label>
+                <div id="mc-link-integrador" class="hidden">
+                  <a id="mc-link-integrador-a" href="#" target="_blank"
+                    class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium">
+                    📎 Ver comprovante anexado
+                  </a>
+                </div>
+                <input id="mc-file-integrador" type="file" accept=".pdf,.jpg,.jpeg,.png"
+                  class="w-full text-xs text-gray-500
+                    file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                    file:text-xs file:font-medium file:bg-green-50 file:text-green-700
+                    hover:file:bg-green-100 cursor-pointer">
+                <p class="text-xs text-gray-400">PDF, JPG ou PNG • máx. 10 MB</p>
+              </div>
+              <!-- Distribuidor -->
+              <div class="border border-dashed border-gray-300 rounded-lg p-3 space-y-2">
+                <label class="block text-xs font-semibold text-gray-600">Distribuidor</label>
+                <div id="mc-link-distribuidor" class="hidden">
+                  <a id="mc-link-distribuidor-a" href="#" target="_blank"
+                    class="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline font-medium">
+                    📎 Ver comprovante anexado
+                  </a>
+                </div>
+                <input id="mc-file-distribuidor" type="file" accept=".pdf,.jpg,.jpeg,.png"
+                  class="w-full text-xs text-gray-500
+                    file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0
+                    file:text-xs file:font-medium file:bg-green-50 file:text-green-700
+                    hover:file:bg-green-100 cursor-pointer">
+                <p class="text-xs text-gray-400">PDF, JPG ou PNG • máx. 10 MB</p>
+              </div>
+            </div>
+          </div>
+
           <p id="mc-msg-ok"  class="hidden text-center text-xs text-green-700 bg-green-50 rounded-lg py-2 font-medium"></p>
           <p id="mc-msg-err" class="hidden text-center text-xs text-red-600 bg-red-50 rounded-lg py-2"></p>
         </form>
@@ -1550,6 +1589,9 @@
       document.getElementById('form-cancel').reset();
       document.getElementById('mc-msg-ok').classList.add('hidden');
       document.getElementById('mc-msg-err').classList.add('hidden');
+      // Ocultar links de comprovantes (serão exibidos em preencherModalCancel se existirem)
+      document.getElementById('mc-link-integrador').classList.add('hidden');
+      document.getElementById('mc-link-distribuidor').classList.add('hidden');
       document.getElementById('modal-cancel-titulo').textContent =
         id === null ? 'Novo Caso de Cancelamento' : 'Editar Cancelamento';
       if (id !== null) {
@@ -1583,6 +1625,21 @@
       set('mc-valor_nao_recuperado',       fmtBrl(r.valor_nao_recuperado));
       set('mc-valor_pendente_distribuidor',fmtBrl(r.valor_pendente_distribuidor));
       set('mc-valor_pendente_integrador',  fmtBrl(r.valor_pendente_integrador));
+      // Comprovantes
+      const linkInt  = document.getElementById('mc-link-integrador');
+      const linkDist = document.getElementById('mc-link-distribuidor');
+      if (r.comprovante_integrador) {
+        linkInt.classList.remove('hidden');
+        document.getElementById('mc-link-integrador-a').href = r.comprovante_integrador;
+      } else {
+        linkInt.classList.add('hidden');
+      }
+      if (r.comprovante_distribuidor) {
+        linkDist.classList.remove('hidden');
+        document.getElementById('mc-link-distribuidor-a').href = r.comprovante_distribuidor;
+      } else {
+        linkDist.classList.add('hidden');
+      }
     }
 
     function fecharModalCancel() {
@@ -1610,6 +1667,20 @@
         : d <= 199 ? 'Range 120 - 199'
         : 'Range 200 >';
       }
+    }
+
+    // Faz upload de um comprovante para o bucket "comprovantes" e retorna a URL pública
+    async function uploadComprovante(file, tipo, id) {
+      const ext  = file.name.split('.').pop().toLowerCase();
+      const path = `cancelamentos/${id}/${tipo}.${ext}`;
+      const { error: upErr } = await db.storage
+        .from('comprovantes')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = db.storage
+        .from('comprovantes')
+        .getPublicUrl(path);
+      return publicUrl;
     }
 
     async function salvarCancelamento() {
@@ -1649,10 +1720,33 @@
           observacao:                  g('mc-observacao').value.trim()||null,
           updated_at:                  new Date().toISOString()
         };
-        const { error } = editandoCancelId === null
-          ? await db.from('cancelamentos').insert(payload)
-          : await db.from('cancelamentos').update(payload).eq('id', editandoCancelId);
-        if (error) throw error;
+
+        // 1. Salvar/inserir o registro e obter o ID
+        let savedId = editandoCancelId;
+        if (editandoCancelId === null) {
+          const { data: inserted, error: insErr } = await db
+            .from('cancelamentos').insert(payload).select('id').single();
+          if (insErr) throw insErr;
+          savedId = inserted.id;
+        } else {
+          const { error: updErr } = await db
+            .from('cancelamentos').update(payload).eq('id', editandoCancelId);
+          if (updErr) throw updErr;
+        }
+
+        // 2. Upload dos comprovantes se selecionados
+        btn.textContent = '⏳ Enviando anexos...';
+        const fileInt  = g('mc-file-integrador').files[0];
+        const fileDist = g('mc-file-distribuidor').files[0];
+        const urlUpdate = {};
+        if (fileInt)  urlUpdate.comprovante_integrador  = await uploadComprovante(fileInt,  'integrador',  savedId);
+        if (fileDist) urlUpdate.comprovante_distribuidor = await uploadComprovante(fileDist, 'distribuidor', savedId);
+        if (Object.keys(urlUpdate).length > 0) {
+          const { error: urlErr } = await db
+            .from('cancelamentos').update(urlUpdate).eq('id', savedId);
+          if (urlErr) throw urlErr;
+        }
+
         msgOk.textContent = editandoCancelId ? '✅ Atualizado com sucesso!' : '✅ Caso criado com sucesso!';
         msgOk.classList.remove('hidden');
         cacheCancelamentos = [];
