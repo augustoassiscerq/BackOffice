@@ -538,52 +538,58 @@
 
   <!-- MODAL: Nova OC -->
   <div id="modal-oc" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
         <h2 class="text-base font-bold text-gray-800">Nova Ordem de Compra</h2>
         <button onclick="fecharModalOC()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
       </div>
-      <div class="px-6 py-4 space-y-4">
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Número da OC <span class="text-red-500">*</span></label>
-          <input id="oc-numero" type="text" placeholder="Ex.: OC-2024-001"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">CCBs vinculadas <span class="text-red-500">*</span></label>
-          <textarea id="oc-ccbs" rows="4" placeholder="Um número de CCB por linha&#10;Ex.:&#10;12345678&#10;87654321"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"></textarea>
-          <p class="text-xs text-gray-400 mt-1">Um número de CCB por linha</p>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
+      <div class="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+        <!-- Número da OC -->
+        <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Valor de Quitação (R$)</label>
-            <input id="oc-valor" type="text" placeholder="0,00"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-blue-500"
-              oninput="maskBRL(this)" onpaste="pasteBRL(event, this)">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Quitação</label>
-            <select id="oc-tipo"
+            <label class="block text-xs font-medium text-gray-600 mb-1">Número da OC <span class="text-red-500">*</span></label>
+            <input id="oc-numero" type="text" placeholder="Ex.: OC-2024-001"
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">— Selecione —</option>
-              <option>Valor Presente</option>
-              <option>Valor do Projeto</option>
-            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Observação</label>
+            <input id="oc-obs" type="text"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           </div>
         </div>
+
+        <!-- Tabela de CCBs -->
         <div>
-          <label class="block text-xs font-medium text-gray-600 mb-1">Observação</label>
-          <textarea id="oc-obs" rows="2"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+          <label class="block text-xs font-medium text-gray-600 mb-2">CCBs vinculadas <span class="text-red-500">*</span></label>
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 w-1/3">CCB</th>
+                  <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 w-1/3">Valor de Quitação (R$)</th>
+                  <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 w-1/3">Tipo</th>
+                  <th class="px-2 py-2 w-8"></th>
+                </tr>
+              </thead>
+              <tbody id="oc-itens-body"></tbody>
+            </table>
+          </div>
+          <button type="button" onclick="addOCItem()"
+            class="mt-2 text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 transition-colors">
+            <span class="text-base leading-none">+</span> Adicionar CCB
+          </button>
         </div>
+
         <p id="oc-msg-err" class="hidden text-xs text-red-600 bg-red-50 rounded-lg py-2 px-3"></p>
       </div>
-      <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
-        <button onclick="fecharModalOC()"
-          class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-        <button id="oc-btn-salvar" onclick="criarOC()"
-          class="px-6 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors">💾 Criar OC</button>
+      <div class="flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
+        <p id="oc-total-label" class="text-sm font-semibold text-gray-600"></p>
+        <div class="flex gap-3">
+          <button onclick="fecharModalOC()"
+            class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+          <button id="oc-btn-salvar" onclick="criarOC()"
+            class="px-6 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors">💾 Criar OC</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2089,12 +2095,59 @@
     // ══════════════════════════════════════════════════════════════
     let cacheOCs = [];
 
+    // Cria o HTML de uma linha da tabela de itens da OC
+    function _ocItemRowHtml() {
+      return `<tr class="oc-item-row border-t border-gray-100">
+        <td class="px-2 py-1.5">
+          <input type="text" placeholder="Ex.: 12345678"
+            class="oc-ccb w-full border border-gray-300 rounded px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-500">
+        </td>
+        <td class="px-2 py-1.5">
+          <input type="text" placeholder="0,00"
+            class="oc-valor w-full border border-gray-300 rounded px-2 py-1.5 text-xs input-brl focus:outline-none focus:ring-1 focus:ring-blue-500"
+            oninput="maskBRL(this); _atualizarTotalOC()" onpaste="pasteBRL(event,this)">
+        </td>
+        <td class="px-2 py-1.5">
+          <select class="oc-tipo w-full border border-gray-300 rounded px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="">—</option>
+            <option>Valor Presente</option>
+            <option>Valor do Projeto</option>
+          </select>
+        </td>
+        <td class="px-2 py-1.5 text-center">
+          <button type="button" onclick="removeOCItem(this)"
+            class="text-red-400 hover:text-red-600 font-bold text-sm leading-none transition-colors">✕</button>
+        </td>
+      </tr>`;
+    }
+
+    function addOCItem() {
+      document.getElementById('oc-itens-body').insertAdjacentHTML('beforeend', _ocItemRowHtml());
+    }
+
+    function removeOCItem(btn) {
+      const rows = document.querySelectorAll('.oc-item-row');
+      if (rows.length <= 1) return; // manter pelo menos 1 linha
+      btn.closest('tr').remove();
+      _atualizarTotalOC();
+    }
+
+    function _atualizarTotalOC() {
+      const total = [...document.querySelectorAll('.oc-valor')]
+        .reduce((s, el) => s + (parseBRL(el.value) || 0), 0);
+      const el = document.getElementById('oc-total-label');
+      el.textContent = total > 0 ? `Total: ${brl(total)}` : '';
+    }
+
     function abrirModalOC() {
-      ['oc-numero','oc-ccbs','oc-valor','oc-obs'].forEach(id => document.getElementById(id).value = '');
-      document.getElementById('oc-tipo').value = '';
+      document.getElementById('oc-numero').value = '';
+      document.getElementById('oc-obs').value    = '';
       document.getElementById('oc-msg-err').classList.add('hidden');
-      document.getElementById('oc-btn-salvar').disabled = false;
+      document.getElementById('oc-total-label').textContent = '';
+      document.getElementById('oc-btn-salvar').disabled    = false;
       document.getElementById('oc-btn-salvar').textContent = '💾 Criar OC';
+      // Inicializar com uma linha vazia
+      document.getElementById('oc-itens-body').innerHTML = _ocItemRowHtml();
       document.getElementById('modal-oc').classList.remove('hidden');
       document.body.style.overflow = 'hidden';
     }
@@ -2121,12 +2174,14 @@
     }
 
     function renderizarOCs() {
-      const abertas = cacheOCs.filter(o => !o.pago).length;
-      const pagas   = cacheOCs.filter(o =>  o.pago).length;
-      const valor   = cacheOCs.reduce((s, o) => s + (o.valor_quitacao || 0), 0);
+      const abertas  = cacheOCs.filter(o => !o.pago).length;
+      const pagas    = cacheOCs.filter(o =>  o.pago).length;
+      // Valor total = soma de todos os itens de todas as OCs
+      const valorTotal = cacheOCs.reduce((s, o) =>
+        s + (o.itens || []).reduce((si, it) => si + (it.valor || 0), 0), 0);
       document.getElementById('oc-kpi-abertas').textContent = abertas;
       document.getElementById('oc-kpi-pagas').textContent   = pagas;
-      document.getElementById('oc-kpi-valor').textContent   = brl(valor);
+      document.getElementById('oc-kpi-valor').textContent   = brl(valorTotal);
 
       if (!cacheOCs.length) {
         document.getElementById('oc-vazio').classList.remove('hidden');
@@ -2134,27 +2189,42 @@
       }
       document.getElementById('oc-lista').classList.remove('hidden');
       document.getElementById('oc-lista').innerHTML = cacheOCs.map(o => {
-        const ccbs      = (o.ccbs || []).join(' · ');
+        const itens     = o.itens || [];
+        const totalOC   = itens.reduce((s, it) => s + (it.valor || 0), 0);
         const dt        = new Date(o.created_at).toLocaleDateString('pt-BR');
         const pagoClass = o.pago ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700';
         const pagoTxt   = o.pago ? '✓ Paga' : '⏳ Pendente';
+        const linhasItens = itens.map(it => `
+          <tr class="border-t border-gray-50">
+            <td class="py-1.5 pr-4 text-xs font-mono font-semibold text-gray-700">${esc(it.ccb||'—')}</td>
+            <td class="py-1.5 pr-4 text-xs text-right text-gray-700">${it.valor ? brl(it.valor) : '—'}</td>
+            <td class="py-1.5 text-xs text-gray-500">
+              ${it.tipo ? `<span class="px-1.5 py-0.5 rounded text-xs bg-blue-50 text-blue-700">${esc(it.tipo)}</span>` : '—'}
+            </td>
+          </tr>`).join('');
         return `<div class="bg-white rounded-xl border ${o.pago ? 'border-green-200' : 'border-orange-200'} shadow-sm p-5">
-          <div class="flex items-start justify-between gap-4">
+          <div class="flex items-start justify-between gap-6">
             <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap mb-2">
+              <div class="flex items-center gap-2 flex-wrap mb-3">
                 <span class="text-base font-bold text-gray-800">${esc(o.numero_oc)}</span>
                 <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${pagoClass}">${pagoTxt}</span>
-                ${o.tipo_quitacao ? `<span class="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">${esc(o.tipo_quitacao)}</span>` : ''}
               </div>
-              <p class="text-xs text-gray-500 mb-1">
-                <span class="font-medium text-gray-600">CCBs:</span>
-                <span class="font-mono ml-1">${esc(ccbs) || '—'}</span>
-              </p>
+              <table class="w-full mb-2">
+                <thead>
+                  <tr>
+                    <th class="text-left pb-1 text-xs font-semibold text-gray-400 pr-4">CCB</th>
+                    <th class="text-right pb-1 text-xs font-semibold text-gray-400 pr-4">Valor</th>
+                    <th class="text-left pb-1 text-xs font-semibold text-gray-400">Tipo</th>
+                  </tr>
+                </thead>
+                <tbody>${linhasItens}</tbody>
+              </table>
               ${o.observacao ? `<p class="text-xs text-gray-400 italic mt-1">${esc(o.observacao)}</p>` : ''}
               <p class="text-xs text-gray-300 mt-2">Criada em ${dt}</p>
             </div>
-            <div class="text-right flex-shrink-0 space-y-2">
-              <p class="text-xl font-bold text-gray-800">${o.valor_quitacao ? brl(o.valor_quitacao) : '—'}</p>
+            <div class="text-right flex-shrink-0 space-y-2 min-w-[140px]">
+              <p class="text-xl font-bold text-gray-800">${totalOC > 0 ? brl(totalOC) : '—'}</p>
+              <p class="text-xs text-gray-400">${itens.length} CCB${itens.length !== 1 ? 's' : ''}</p>
               ${!o.pago
                 ? `<button onclick="marcarOCPaga(${o.id})"
                     class="block w-full px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors">
@@ -2178,34 +2248,36 @@
       const msgErr = document.getElementById('oc-msg-err');
       msgErr.classList.add('hidden');
 
-      const numero  = document.getElementById('oc-numero').value.trim();
-      const ccbsRaw = document.getElementById('oc-ccbs').value;
-      const valor   = parseBRL(document.getElementById('oc-valor').value);
-      const tipo    = document.getElementById('oc-tipo').value;
-      const obs     = document.getElementById('oc-obs').value.trim();
+      const numero = document.getElementById('oc-numero').value.trim();
+      const obs    = document.getElementById('oc-obs').value.trim();
 
       if (!numero) { msgErr.textContent = 'Informe o número da OC.'; msgErr.classList.remove('hidden'); return; }
-      const ccbs = ccbsRaw.split(/[\n,]/).map(s => s.trim()).filter(Boolean);
-      if (!ccbs.length) { msgErr.textContent = 'Informe pelo menos uma CCB.'; msgErr.classList.remove('hidden'); return; }
+
+      // Coletar itens da tabela
+      const itens = [...document.querySelectorAll('.oc-item-row')].map(row => ({
+        ccb:   row.querySelector('.oc-ccb').value.trim(),
+        valor: parseBRL(row.querySelector('.oc-valor').value) || null,
+        tipo:  row.querySelector('.oc-tipo').value || null,
+      })).filter(it => it.ccb);
+
+      if (!itens.length) { msgErr.textContent = 'Informe pelo menos uma CCB.'; msgErr.classList.remove('hidden'); return; }
 
       btn.disabled = true; btn.textContent = '⏳ Salvando...';
       try {
-        // 1. Inserir OC
-        const { error: ocErr } = await db.from('ordens_compra').insert({
-          numero_oc: numero, ccbs, valor_quitacao: valor || null,
-          tipo_quitacao: tipo || null, observacao: obs || null
-        });
+        // 1. Inserir OC com itens como JSONB
+        const { error: ocErr } = await db.from('ordens_compra')
+          .insert({ numero_oc: numero, itens, observacao: obs || null });
         if (ocErr) throw ocErr;
 
-        // 2. Atualizar cancelamentos vinculados
+        // 2. Atualizar cada cancelamento com numero_oc e seu valor individual
         btn.textContent = '⏳ Atualizando CCBs...';
-        for (const ccb of ccbs) {
+        for (const it of itens) {
           await db.from('cancelamentos').update({
-            numero_oc: numero,
-            valor_boleto_quitacao: valor || null,
-            boleto_emitido: 'Sim',
-            updated_at: new Date().toISOString()
-          }).eq('ccb', ccb);
+            numero_oc:            numero,
+            valor_boleto_quitacao: it.valor,
+            boleto_emitido:        'Sim',
+            updated_at:            new Date().toISOString()
+          }).eq('ccb', it.ccb);
         }
 
         fecharModalOC();
@@ -2221,11 +2293,12 @@
     async function marcarOCPaga(id) {
       const oc = cacheOCs.find(o => o.id === id);
       if (!oc) return;
-      if (!confirm(`Marcar a OC "${oc.numero_oc}" como PAGA?\n\nIsso vai atualizar o campo "Boleto Pago" de todas as CCBs vinculadas.`)) return;
+      if (!confirm(`Marcar a OC "${oc.numero_oc}" como PAGA?\n\nIsso vai atualizar "Boleto Pago" de todas as CCBs vinculadas.`)) return;
       try {
         await db.from('ordens_compra').update({ pago: true, updated_at: new Date().toISOString() }).eq('id', id);
-        for (const ccb of (oc.ccbs || [])) {
-          await db.from('cancelamentos').update({ boleto_pago: 'Sim', updated_at: new Date().toISOString() }).eq('ccb', ccb);
+        for (const it of (oc.itens || [])) {
+          if (it.ccb) await db.from('cancelamentos')
+            .update({ boleto_pago: 'Sim', updated_at: new Date().toISOString() }).eq('ccb', it.ccb);
         }
         cacheCancelamentos = [];
         await carregarOCs();
@@ -2235,11 +2308,12 @@
     async function desmarcarOCPaga(id) {
       const oc = cacheOCs.find(o => o.id === id);
       if (!oc) return;
-      if (!confirm(`Desfazer pagamento da OC "${oc.numero_oc}"?\n\nO campo "Boleto Pago" das CCBs vinculadas será revertido para "Não".`)) return;
+      if (!confirm(`Desfazer pagamento da OC "${oc.numero_oc}"?\n\n"Boleto Pago" das CCBs será revertido para "Não".`)) return;
       try {
         await db.from('ordens_compra').update({ pago: false, updated_at: new Date().toISOString() }).eq('id', id);
-        for (const ccb of (oc.ccbs || [])) {
-          await db.from('cancelamentos').update({ boleto_pago: 'Não', updated_at: new Date().toISOString() }).eq('ccb', ccb);
+        for (const it of (oc.itens || [])) {
+          if (it.ccb) await db.from('cancelamentos')
+            .update({ boleto_pago: 'Não', updated_at: new Date().toISOString() }).eq('ccb', it.ccb);
         }
         cacheCancelamentos = [];
         await carregarOCs();
