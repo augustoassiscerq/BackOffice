@@ -508,6 +508,58 @@
         <div id="analise-distribuidores" class="space-y-3"></div>
       </div>
     </div>
+
+    <!-- Comparativo Mensal -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Comparativo Mensal — Valor do Projeto × Boleto de Quitação</h3>
+          <p class="text-xs text-gray-400 mt-0.5">Apenas casos com boleto emitido · agrupado por mês de quitação</p>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-max text-sm" id="analise-mensal-table">
+          <thead>
+            <tr class="border-b border-gray-200">
+              <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Mês / Ano</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Qtd CCBs</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Valor do Projeto</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Valor Boleto Quitação</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-red-400 whitespace-nowrap">Desconto / Prejuízo</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">% Desconto</th>
+            </tr>
+          </thead>
+          <tbody id="analise-mensal-body" class="divide-y divide-gray-50"></tbody>
+          <tfoot id="analise-mensal-foot" class="border-t-2 border-gray-300 bg-gray-50 font-semibold"></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Range por mês de solicitação -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+      <div class="mb-4">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Range por Mês de Solicitação</h3>
+        <p class="text-xs text-gray-400 mt-0.5">Distribuição dos ranges pela data de solicitação do cancelamento</p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-max text-sm" id="analise-range-mensal-table">
+          <thead>
+            <tr class="border-b border-gray-200">
+              <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Mês / Ano</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-gray-500">Total</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-green-600">01–29</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-yellow-600">30–59</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-orange-600">60–89</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-red-500">90–119</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-red-600">120–199</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-red-800">200+</th>
+            </tr>
+          </thead>
+          <tbody id="analise-range-mensal-body" class="divide-y divide-gray-50"></tbody>
+          <tfoot id="analise-range-mensal-foot" class="border-t-2 border-gray-300 bg-gray-50 font-semibold"></tfoot>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- VIEW: OCs -->
@@ -2093,6 +2145,88 @@
       const maxDist = topDist[0]?.[1] || 1;
       document.getElementById('analise-distribuidores').innerHTML =
         topDist.map(([n, c]) => barRow(n, c, maxDist, 'bg-teal-400')).join('');
+
+      // ── Comparativo Mensal (boleto emitido, agrupado por data_quitacao)
+      const mensalMap = {};
+      d.filter(r => r.boleto_emitido === 'Sim' && r.data_quitacao).forEach(r => {
+        const dt  = new Date(r.data_quitacao + 'T00:00:00');
+        const key = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+        if (!mensalMap[key]) mensalMap[key] = { count:0, vProjeto:0, vBoleto:0 };
+        mensalMap[key].count++;
+        mensalMap[key].vProjeto += r.valor_projeto         || 0;
+        mensalMap[key].vBoleto  += r.valor_boleto_quitacao || 0;
+      });
+
+      const mesesOrdenados = Object.keys(mensalMap).sort();
+      const nomesMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+      const fmtMes = key => {
+        const [ano, m] = key.split('-');
+        return `${nomesMes[parseInt(m)-1]}/${ano}`;
+      };
+
+      let totCnt=0, totVP=0, totVB=0;
+      document.getElementById('analise-mensal-body').innerHTML = mesesOrdenados.map(key => {
+        const { count, vProjeto, vBoleto } = mensalMap[key];
+        const diff = vBoleto - vProjeto; // negativo = prejuízo
+        const pct  = vProjeto > 0 ? ((diff / vProjeto) * 100).toFixed(1) : '—';
+        totCnt += count; totVP += vProjeto; totVB += vBoleto;
+        const diffCls = diff < 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold';
+        return `<tr class="hover:bg-gray-50">
+          <td class="px-3 py-2 text-sm font-medium text-gray-700">${fmtMes(key)}</td>
+          <td class="px-3 py-2 text-sm text-center text-gray-600">${count}</td>
+          <td class="px-3 py-2 text-sm text-right text-gray-700">${brl(vProjeto)}</td>
+          <td class="px-3 py-2 text-sm text-right text-gray-700">${brl(vBoleto)}</td>
+          <td class="px-3 py-2 text-sm text-right ${diffCls}">${brl(diff)}</td>
+          <td class="px-3 py-2 text-sm text-right ${diff < 0 ? 'text-red-500' : 'text-green-500'}">${pct}%</td>
+        </tr>`;
+      }).join('');
+
+      const totDiff = totVB - totVP;
+      const totPct  = totVP > 0 ? ((totDiff/totVP)*100).toFixed(1) : '—';
+      document.getElementById('analise-mensal-foot').innerHTML = `<tr>
+        <td class="px-3 py-2.5 text-sm font-bold text-gray-800">Total Geral</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-center text-gray-800">${totCnt}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-right text-gray-800">${brl(totVP)}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-right text-gray-800">${brl(totVB)}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-right ${totDiff < 0 ? 'text-red-600' : 'text-green-600'}">${brl(totDiff)}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-right ${totDiff < 0 ? 'text-red-500' : 'text-green-500'}">${totPct}%</td>
+      </tr>`;
+
+      // ── Range por mês de solicitação
+      const ranges = ['Range 01 - 29','Range 30 - 59','Range 60 - 89','Range 90 - 119','Range 120 - 199','Range 200 >'];
+      const rmMap  = {};
+      d.filter(r => r.data_solicitacao).forEach(r => {
+        const dt  = new Date(r.data_solicitacao + 'T00:00:00');
+        const key = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+        if (!rmMap[key]) rmMap[key] = { total:0, r1:0, r2:0, r3:0, r4:0, r5:0, r6:0 };
+        rmMap[key].total++;
+        const ri = ['r1','r2','r3','r4','r5','r6'][ranges.indexOf(r.range_prazo)];
+        if (ri) rmMap[key][ri]++;
+      });
+
+      const rmMeses = Object.keys(rmMap).sort();
+      const rmTot   = { total:0, r1:0, r2:0, r3:0, r4:0, r5:0, r6:0 };
+      const cellR   = v => `<td class="px-3 py-2 text-sm text-center text-gray-600">${v || '—'}</td>`;
+
+      document.getElementById('analise-range-mensal-body').innerHTML = rmMeses.map(key => {
+        const m = rmMap[key];
+        Object.keys(rmTot).forEach(k => rmTot[k] += m[k]);
+        return `<tr class="hover:bg-gray-50">
+          <td class="px-3 py-2 text-sm font-medium text-gray-700">${fmtMes(key)}</td>
+          ${cellR(m.total)}${cellR(m.r1||'')}${cellR(m.r2||'')}${cellR(m.r3||'')}${cellR(m.r4||'')}${cellR(m.r5||'')}${cellR(m.r6||'')}
+        </tr>`;
+      }).join('');
+
+      document.getElementById('analise-range-mensal-foot').innerHTML = `<tr>
+        <td class="px-3 py-2.5 text-sm font-bold text-gray-800">Total Geral</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-center text-gray-800">${rmTot.total}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-center text-green-700">${rmTot.r1}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-center text-yellow-700">${rmTot.r2}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-center text-orange-700">${rmTot.r3}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-center text-red-600">${rmTot.r4}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-center text-red-700">${rmTot.r5}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-center text-red-900">${rmTot.r6}</td>
+      </tr>`;
     }
 
     // ══════════════════════════════════════════════════════════════
