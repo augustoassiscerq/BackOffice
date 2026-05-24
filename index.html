@@ -486,7 +486,7 @@
       <div class="flex items-center gap-2">
         <div class="flex rounded-lg border border-gray-200 overflow-hidden">
           <button id="abaan-todos" onclick="switchAbaAnalise('todos')"
-            class="px-4 py-1.5 text-sm font-semibold bg-gray-800 text-white transition-colors">Todos</button>
+            class="px-4 py-1.5 text-sm font-semibold bg-gray-800 text-white transition-colors">Cancelamentos</button>
           <button id="abaan-resolve" onclick="switchAbaAnalise('resolve')"
             class="px-4 py-1.5 text-sm font-semibold bg-white text-gray-500 hover:bg-gray-50 transition-colors border-l border-gray-200">Resolve</button>
           <button id="abaan-perdas" onclick="switchAbaAnalise('perdas')"
@@ -2135,9 +2135,9 @@
     }
 
     function renderizarAnalise() {
-      const d = abaAnalise === 'resolve' ? cacheCancelamentos.filter(isResolveCase)
-              : abaAnalise === 'perdas'  ? cacheCancelamentos.filter(r => r.perda === 'SIM')
-              : cacheCancelamentos;
+      const d = abaAnalise === 'resolve' ? cacheCancelamentos.filter(r => isResolveCase(r))
+              : abaAnalise === 'perdas'  ? cacheCancelamentos.filter(r => r.perda === 'SIM' && !isResolveCase(r))
+              : cacheCancelamentos.filter(r => !isResolveCase(r) && r.perda !== 'SIM');
       const total = d.length;
 
       // ── KPIs linha 1: volume
