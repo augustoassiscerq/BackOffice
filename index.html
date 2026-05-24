@@ -1647,6 +1647,19 @@
           || int.includes('R C VIEGAS')      || dist.includes('R C VIEGAS');
     }
 
+    // Regra de negócio: perda = (marcado SIM manualmente OU dias > 121)
+    //                         E ainda existe saldo a recuperar (falta > 0).
+    // Se o valor foi integralmente recuperado, o caso deixa de ser perda.
+    function isPerda(r) {
+      const flagManual = (r.perda || '').toUpperCase() === 'SIM';
+      const diasOk     = (r.dias_solicitacao || 0) > 121;
+      if (!flagManual && !diasOk) return false;
+      const falta = (r.valor_projeto || 0)
+                  - (r.valor_pendente_distribuidor || 0)
+                  - (r.valor_pendente_integrador   || 0);
+      return falta > 0;
+    }
+
     function switchAbaCancel(aba) {
       abaCancel = aba;
       const abaAtivo   = 'px-5 py-3 text-sm font-semibold border-b-2 border-green-600 text-green-700 transition-all';
@@ -1681,7 +1694,7 @@
       document.getElementById('kpi-total').textContent      = base.length;
       document.getElementById('kpi-pendentes').textContent  = base.filter(r => (r.status||'').toLowerCase().includes('pendente')).length;
       document.getElementById('kpi-recuperados').textContent= base.filter(r => { const s=(r.status||'').toLowerCase(); return s.includes('recuperado')||s.includes('resolve'); }).length;
-      document.getElementById('kpi-perda').textContent      = base.filter(r => r.perda === 'SIM').length;
+      document.getElementById('kpi-perda').textContent      = base.filter(r => isPerda(r)).length;
     }
 
     function filtrarCancelamentos() {
@@ -1700,7 +1713,8 @@
       filtradosCancel = baseAba.filter(r => {
         if (busca  && !((r.ccb||'').toLowerCase().includes(busca)||(r.cliente||'').toLowerCase().includes(busca))) return false;
         if (stFilt && !(r.status||'').toLowerCase().includes(stFilt)) return false;
-        if (perdaF && r.perda !== perdaF) return false;
+        if (perdaF === 'SIM'  && !isPerda(r)) return false;
+        if (perdaF === 'NÃO' &&  isPerda(r)) return false;
         if (rangeF && r.range_prazo !== rangeF) return false;
         if (intFilt&& !(r.integrador||'').toLowerCase().includes(intFilt)) return false;
         return true;
@@ -1730,7 +1744,7 @@
       document.getElementById('cancel-body').innerHTML = dados.map(r => {
         const stCls    = getStatusClsCancel(r.status);
         const rgCls    = getRangeClsCancel(r.range_prazo);
-        const perdaCls = r.perda === 'SIM' ? 'badge-pendenciar' : 'bg-gray-100 text-gray-500';
+        const perdaCls = isPerda(r) ? 'badge-pendenciar' : 'bg-gray-100 text-gray-500';
         const diasCls  = (r.dias_solicitacao||0) > 90 ? 'text-red-600 font-bold'
                        : (r.dias_solicitacao||0) > 30 ? 'text-orange-500 font-semibold'
                        : 'text-gray-600';
@@ -2136,14 +2150,14 @@
 
     function renderizarAnalise() {
       const d = abaAnalise === 'resolve' ? cacheCancelamentos.filter(r => isResolveCase(r))
-              : abaAnalise === 'perdas'  ? cacheCancelamentos.filter(r => r.perda === 'SIM' && !isResolveCase(r))
-              : cacheCancelamentos.filter(r => !isResolveCase(r) && r.perda !== 'SIM');
+              : abaAnalise === 'perdas'  ? cacheCancelamentos.filter(r => isPerda(r) && !isResolveCase(r))
+              : cacheCancelamentos.filter(r => !isResolveCase(r) && !isPerda(r));
       const total = d.length;
 
       // ── KPIs linha 1: volume
       const totalValor      = d.reduce((s, r) => s + (r.valor_projeto || 0), 0);
       const recuperados     = d.filter(r => { const s=(r.status||'').toLowerCase(); return s.includes('recuperado')||s.includes('resolve'); }).length;
-      const emPerda         = d.filter(r => r.perda === 'SIM').length;
+      const emPerda         = d.filter(r => isPerda(r)).length;
       const pendentes       = total - recuperados - emPerda;
       const taxaEnc         = total > 0 ? (((recuperados + emPerda) / total) * 100).toFixed(1) : '0.0';
       document.getElementById('analise-kpis').innerHTML = `
