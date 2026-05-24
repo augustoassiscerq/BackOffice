@@ -483,7 +483,17 @@
         <h1 class="text-xl font-bold text-gray-800">Análise de Cancelamentos</h1>
         <p class="text-xs text-gray-400 mt-0.5">Visão consolidada de todos os casos</p>
       </div>
-      <button onclick="carregarAnalise()" class="text-sm text-green-600 hover:text-green-700 font-semibold">↺ Atualizar</button>
+      <div class="flex items-center gap-2">
+        <div class="flex rounded-lg border border-gray-200 overflow-hidden">
+          <button id="abaan-todos" onclick="switchAbaAnalise('todos')"
+            class="px-4 py-1.5 text-sm font-semibold bg-gray-800 text-white transition-colors">Todos</button>
+          <button id="abaan-resolve" onclick="switchAbaAnalise('resolve')"
+            class="px-4 py-1.5 text-sm font-semibold bg-white text-gray-500 hover:bg-gray-50 transition-colors border-l border-gray-200">Resolve</button>
+          <button id="abaan-perdas" onclick="switchAbaAnalise('perdas')"
+            class="px-4 py-1.5 text-sm font-semibold bg-white text-gray-500 hover:bg-gray-50 transition-colors border-l border-gray-200">Perdas</button>
+        </div>
+        <button onclick="carregarAnalise()" class="text-sm text-green-600 hover:text-green-700 font-semibold">↺ Atualizar</button>
+      </div>
     </div>
 
     <!-- KPIs linha 1: volume -->
@@ -2094,6 +2104,18 @@
     // ══════════════════════════════════════════════════════════════
     // ── ANÁLISE ───────────────────────────────────────────────────
     // ══════════════════════════════════════════════════════════════
+    let abaAnalise = 'todos';
+
+    function switchAbaAnalise(aba) {
+      abaAnalise = aba;
+      const ativo   = 'px-4 py-1.5 text-sm font-semibold bg-gray-800 text-white transition-colors';
+      const inativo = 'px-4 py-1.5 text-sm font-semibold bg-white text-gray-500 hover:bg-gray-50 transition-colors border-l border-gray-200';
+      ['todos','resolve','perdas'].forEach(a => {
+        document.getElementById('abaan-' + a).className = a === aba ? ativo : inativo;
+      });
+      renderizarAnalise();
+    }
+
     async function carregarAnalise() {
       if (cacheCancelamentos.length === 0) await carregarCancelamentos();
       renderizarAnalise();
@@ -2113,7 +2135,9 @@
     }
 
     function renderizarAnalise() {
-      const d = cacheCancelamentos;
+      const d = abaAnalise === 'resolve' ? cacheCancelamentos.filter(isResolveCase)
+              : abaAnalise === 'perdas'  ? cacheCancelamentos.filter(r => r.perda === 'SIM')
+              : cacheCancelamentos;
       const total = d.length;
 
       // ── KPIs linha 1: volume
