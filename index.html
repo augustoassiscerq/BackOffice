@@ -2151,10 +2151,17 @@
       d.filter(r => r.boleto_emitido === 'Sim' && r.data_quitacao && r.valor_boleto_quitacao > 0).forEach(r => {
         const dt  = new Date(r.data_quitacao + 'T00:00:00');
         const key = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
-        if (!mensalMap[key]) mensalMap[key] = { count:0, vProjeto:0, vBoleto:0 };
+        if (!mensalMap[key]) mensalMap[key] = { count:0, vProjeto:0, vBoleto:0, itens:[] };
         mensalMap[key].count++;
         mensalMap[key].vProjeto += r.valor_projeto         || 0;
         mensalMap[key].vBoleto  += r.valor_boleto_quitacao || 0;
+        // Guarda o item individual para detalhamento por CCB
+        mensalMap[key].itens.push({
+          ccb:      r.ccb      || '—',
+          cliente:  r.cliente  || '—',
+          vProjeto: r.valor_projeto         || 0,
+          vBoleto:  r.valor_boleto_quitacao || 0,
+        });
       });
 
       const mesesOrdenados = Object.keys(mensalMap).sort();
@@ -2166,19 +2173,34 @@
 
       let totCnt=0, totVP=0, totVB=0;
       document.getElementById('analise-mensal-body').innerHTML = mesesOrdenados.map(key => {
-        const { count, vProjeto, vBoleto } = mensalMap[key];
-        const diff = vBoleto - vProjeto; // negativo = prejuízo
-        const pct  = vProjeto > 0 ? ((diff / vProjeto) * 100).toFixed(1) : '—';
+        const { count, vProjeto, vBoleto, itens } = mensalMap[key];
+        const diff    = vBoleto - vProjeto;
+        const pct     = vProjeto > 0 ? ((diff / vProjeto) * 100).toFixed(1) : '—';
         totCnt += count; totVP += vProjeto; totVB += vBoleto;
         const diffCls = diff < 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold';
-        return `<tr class="hover:bg-gray-50">
-          <td class="px-3 py-2 text-sm font-medium text-gray-700">${fmtMes(key)}</td>
+        // Linhas de detalhe por CCB (ocultas, expandem ao clicar)
+        const detalhe = itens.map(it => {
+          const d2   = it.vBoleto - it.vProjeto;
+          const cls2 = d2 < 0 ? 'text-red-500' : 'text-green-600';
+          return `<tr class="bg-blue-50 border-t border-blue-100 detail-${key} hidden">
+            <td class="pl-8 pr-3 py-1.5 text-xs text-gray-500 font-mono">${esc(it.ccb)}</td>
+            <td class="px-3 py-1.5 text-xs text-center text-gray-400">1</td>
+            <td class="px-3 py-1.5 text-xs text-right text-gray-600">${brl(it.vProjeto)}</td>
+            <td class="px-3 py-1.5 text-xs text-right text-gray-600">${brl(it.vBoleto)}</td>
+            <td class="px-3 py-1.5 text-xs text-right ${cls2}">${brl(d2)}</td>
+            <td class="px-3 py-1.5 text-xs text-right ${cls2}">${it.vProjeto > 0 ? ((d2/it.vProjeto)*100).toFixed(1)+'%' : '—'}</td>
+          </tr>`;
+        }).join('');
+        return `<tr class="hover:bg-gray-50 cursor-pointer select-none" onclick="toggleDetalhe('${key}')">
+          <td class="px-3 py-2 text-sm font-medium text-gray-700">
+            <span class="inline-block w-4 text-gray-400 text-xs" id="ic-${key}">▶</span> ${fmtMes(key)}
+          </td>
           <td class="px-3 py-2 text-sm text-center text-gray-600">${count}</td>
           <td class="px-3 py-2 text-sm text-right text-gray-700">${brl(vProjeto)}</td>
           <td class="px-3 py-2 text-sm text-right text-gray-700">${brl(vBoleto)}</td>
           <td class="px-3 py-2 text-sm text-right ${diffCls}">${brl(diff)}</td>
           <td class="px-3 py-2 text-sm text-right ${diff < 0 ? 'text-red-500' : 'text-green-500'}">${pct}%</td>
-        </tr>`;
+        </tr>${detalhe}`;
       }).join('');
 
       const totDiff = totVB - totVP;
@@ -2235,6 +2257,14 @@
     let cacheOCs = [];
 
     // Cria o HTML de uma linha da tabela de itens da OC
+    function toggleDetalhe(key) {
+      const rows   = document.querySelectorAll(`.detail-${key}`);
+      const icon   = document.getElementById(`ic-${key}`);
+      const hidden = rows.length > 0 && rows[0].classList.contains('hidden');
+      rows.forEach(r => r.classList.toggle('hidden', !hidden));
+      if (icon) icon.textContent = hidden ? '▼' : '▶';
+    }
+
     function _ocItemRowHtml() {
       return `<tr class="oc-item-row border-t border-gray-100">
         <td class="px-2 py-1.5">
