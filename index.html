@@ -775,10 +775,6 @@
                 <input id="mc-valor_boleto_quitacao" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
                   oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Não Recuperado (R$)</label>
-                <input id="mc-valor_nao_recuperado" type="text" placeholder="0,00"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
-                  oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Recuperado Distribuidor (R$)</label>
                 <input id="mc-valor_pendente_distribuidor" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -1825,7 +1821,6 @@
       set('mc-observacao', r.observacao);
       set('mc-valor_projeto',              fmtBrl(r.valor_projeto));
       set('mc-valor_boleto_quitacao',      fmtBrl(r.valor_boleto_quitacao));
-      set('mc-valor_nao_recuperado',       fmtBrl(r.valor_nao_recuperado));
       set('mc-valor_pendente_distribuidor',fmtBrl(r.valor_pendente_distribuidor));
       set('mc-valor_pendente_integrador',  fmtBrl(r.valor_pendente_integrador));
       calcFaltaRecuperar();
@@ -1955,7 +1950,6 @@
           perda:                       g('mc-perda').value||null,
           resultado:                   g('mc-resultado').value||null,
           valor_projeto:               parseBRL(g('mc-valor_projeto').value)||null,
-          valor_nao_recuperado:        parseBRL(g('mc-valor_nao_recuperado').value)||null,
           valor_pendente_distribuidor: parseBRL(g('mc-valor_pendente_distribuidor').value)||null,
           valor_pendente_integrador:   parseBRL(g('mc-valor_pendente_integrador').value)||null,
           observacao:                  g('mc-observacao').value.trim()||null,
@@ -2026,7 +2020,6 @@
         'Perda':                        r.perda||'',
         'Resultado':                    r.resultado||'',
         'Valor Projeto (R$)':           r.valor_projeto||0,
-        'Valor Não Recuperado (R$)':    r.valor_nao_recuperado||0,
         'Valor Recuperado Distribuidor': r.valor_pendente_distribuidor||0,
         'Valor Recuperado Integrador':  r.valor_pendente_integrador||0,
         'Valor que Falta Recuperar':    ((r.valor_projeto||0) - (r.valor_pendente_distribuidor||0) - (r.valor_pendente_integrador||0)),
