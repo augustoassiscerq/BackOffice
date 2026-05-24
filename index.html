@@ -770,7 +770,7 @@
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor do Projeto (R$)</label>
                 <input id="mc-valor_projeto" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
-                  oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
+                  oninput="maskBRL(this); calcFaltaRecuperar()" onpaste="pasteBRL(event,this)"></div>
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Boleto de Quitação (R$)</label>
                 <input id="mc-valor_boleto_quitacao" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -779,14 +779,17 @@
                 <input id="mc-valor_nao_recuperado" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
                   oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Pendente Distribuidor (R$)</label>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Recuperado Distribuidor (R$)</label>
                 <input id="mc-valor_pendente_distribuidor" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
-                  oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Pendente Integrador (R$)</label>
+                  oninput="maskBRL(this); calcFaltaRecuperar()" onpaste="pasteBRL(event,this)"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Recuperado Integrador (R$)</label>
                 <input id="mc-valor_pendente_integrador" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
-                  oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
+                  oninput="maskBRL(this); calcFaltaRecuperar()" onpaste="pasteBRL(event,this)"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor que Falta Recuperar (R$)</label>
+                <input id="mc-valor_falta_recuperar" type="text" placeholder="0,00" readonly
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm input-brl bg-gray-50 text-gray-700 font-semibold cursor-default"></div>
             </div>
           </div>
 
@@ -1773,6 +1776,17 @@
     }
 
     // ── Modal Cancelamento ────────────────────────────────────────
+    function calcFaltaRecuperar() {
+      const projeto = parseBRL(document.getElementById('mc-valor_projeto').value) || 0;
+      const dist    = parseBRL(document.getElementById('mc-valor_pendente_distribuidor').value) || 0;
+      const integ   = parseBRL(document.getElementById('mc-valor_pendente_integrador').value) || 0;
+      const falta   = projeto - dist - integ;
+      const el      = document.getElementById('mc-valor_falta_recuperar');
+      el.value      = falta !== 0 ? fmtBrl(falta) : '';
+      el.classList.toggle('text-red-600',  falta > 0);
+      el.classList.toggle('text-green-700', falta <= 0);
+    }
+
     function abrirModalCancel(id) {
       editandoCancelId = id;
       document.getElementById('form-cancel').reset();
@@ -1814,6 +1828,7 @@
       set('mc-valor_nao_recuperado',       fmtBrl(r.valor_nao_recuperado));
       set('mc-valor_pendente_distribuidor',fmtBrl(r.valor_pendente_distribuidor));
       set('mc-valor_pendente_integrador',  fmtBrl(r.valor_pendente_integrador));
+      calcFaltaRecuperar();
       // Comprovantes
       const linkInt  = document.getElementById('mc-link-integrador');
       const linkDist = document.getElementById('mc-link-distribuidor');
@@ -2012,8 +2027,9 @@
         'Resultado':                    r.resultado||'',
         'Valor Projeto (R$)':           r.valor_projeto||0,
         'Valor Não Recuperado (R$)':    r.valor_nao_recuperado||0,
-        'Valor Pendente Distribuidor':  r.valor_pendente_distribuidor||0,
-        'Valor Pendente Integrador':    r.valor_pendente_integrador||0,
+        'Valor Recuperado Distribuidor': r.valor_pendente_distribuidor||0,
+        'Valor Recuperado Integrador':  r.valor_pendente_integrador||0,
+        'Valor que Falta Recuperar':    ((r.valor_projeto||0) - (r.valor_pendente_distribuidor||0) - (r.valor_pendente_integrador||0)),
         'Observação':                   r.observacao||'',
       }));
       const ws = XLSX.utils.json_to_sheet(linhas);
