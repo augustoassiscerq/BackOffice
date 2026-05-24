@@ -485,9 +485,39 @@
       </div>
       <button onclick="carregarAnalise()" class="text-sm text-green-600 hover:text-green-700 font-semibold">↺ Atualizar</button>
     </div>
-    <!-- KPIs -->
+
+    <!-- KPIs linha 1: volume -->
     <div id="analise-kpis" class="grid grid-cols-4 gap-4"></div>
-    <!-- Barras -->
+    <!-- KPIs linha 2: financeiro -->
+    <div id="analise-kpis2" class="grid grid-cols-4 gap-4"></div>
+
+    <!-- Comparativo Mensal — PRIMEIRO -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+      <div class="mb-4">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Comparativo Mensal — Valor do Projeto × Boleto de Quitação</h3>
+        <p class="text-xs text-gray-400 mt-0.5">Casos com boleto emitido e valor preenchido · agrupado por mês de quitação · clique no mês para ver CCBs · 🔴 boleto maior que projeto = prejuízo · 🟢 menor = economia</p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-max text-sm" id="analise-mensal-table">
+          <thead>
+            <tr class="border-b border-gray-200">
+              <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Mês / Ano</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Qtd CCBs</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Valor do Projeto</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Ticket Médio</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Valor Boleto Quitação</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Diferença (Boleto − Projeto)</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">% Prejuízo</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Δ MoM</th>
+            </tr>
+          </thead>
+          <tbody id="analise-mensal-body" class="divide-y divide-gray-50"></tbody>
+          <tfoot id="analise-mensal-foot" class="border-t-2 border-gray-300 bg-gray-50 font-semibold"></tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Barras: Range + Status -->
     <div class="grid grid-cols-2 gap-4">
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
         <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Distribuição por Range</h3>
@@ -498,40 +528,30 @@
         <div id="analise-status" class="space-y-3"></div>
       </div>
     </div>
+
+    <!-- Barras: Integradores + Distribuidores (por quantidade) -->
     <div class="grid grid-cols-2 gap-4">
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Top Integradores</h3>
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Top Integradores <span class="normal-case font-normal text-gray-400">(por qtd)</span></h3>
         <div id="analise-integradores" class="space-y-3"></div>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Top Distribuidores</h3>
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">Top Distribuidores <span class="normal-case font-normal text-gray-400">(por qtd)</span></h3>
         <div id="analise-distribuidores" class="space-y-3"></div>
       </div>
     </div>
 
-    <!-- Comparativo Mensal -->
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Comparativo Mensal — Valor do Projeto × Boleto de Quitação</h3>
-          <p class="text-xs text-gray-400 mt-0.5">Apenas casos com boleto emitido e valor preenchido · agrupado por mês de quitação · positivo = juros recuperados · negativo = desconto concedido</p>
-        </div>
+    <!-- Recuperação por Parceiro -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Recuperação por Integrador</h3>
+        <p class="text-xs text-gray-400 mb-4">Valor do projeto vs. valor já recuperado do integrador</p>
+        <div id="analise-recup-integrador" class="space-y-3"></div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-max text-sm" id="analise-mensal-table">
-          <thead>
-            <tr class="border-b border-gray-200">
-              <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Mês / Ano</th>
-              <th class="text-center px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Qtd CCBs</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Valor do Projeto</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Valor Boleto Quitação</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Diferença (Boleto − Projeto)</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">% sobre Projeto</th>
-            </tr>
-          </thead>
-          <tbody id="analise-mensal-body" class="divide-y divide-gray-50"></tbody>
-          <tfoot id="analise-mensal-foot" class="border-t-2 border-gray-300 bg-gray-50 font-semibold"></tfoot>
-        </table>
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Recuperação por Distribuidor</h3>
+        <p class="text-xs text-gray-400 mb-4">Valor do projeto vs. valor já recuperado do distribuidor</p>
+        <div id="analise-recup-distribuidor" class="space-y-3"></div>
       </div>
     </div>
 
@@ -2096,28 +2116,66 @@
       const d = cacheCancelamentos;
       const total = d.length;
 
-      // ── KPIs
-      const totalValor    = d.reduce((s, r) => s + (r.valor_projeto || 0), 0);
-      const recuperados   = d.filter(r => { const s=(r.status||'').toLowerCase(); return s.includes('recuperado')||s.includes('resolve'); }).length;
-      const emPerda       = d.filter(r => r.perda === 'SIM').length;
-      const valorRecup    = d.reduce((s, r) => s + (r.valor_boleto_quitacao || 0), 0);
+      // ── KPIs linha 1: volume
+      const totalValor      = d.reduce((s, r) => s + (r.valor_projeto || 0), 0);
+      const recuperados     = d.filter(r => { const s=(r.status||'').toLowerCase(); return s.includes('recuperado')||s.includes('resolve'); }).length;
+      const emPerda         = d.filter(r => r.perda === 'SIM').length;
+      const pendentes       = total - recuperados - emPerda;
+      const taxaEnc         = total > 0 ? (((recuperados + emPerda) / total) * 100).toFixed(1) : '0.0';
       document.getElementById('analise-kpis').innerHTML = `
         <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Total de Casos</p>
           <p class="text-3xl font-bold text-gray-800">${total}</p>
+          <p class="text-xs text-gray-400 mt-1">${brl(totalValor)} em projetos</p>
         </div>
         <div class="bg-white rounded-xl border border-green-200 shadow-sm p-4">
           <p class="text-xs font-semibold text-green-400 uppercase tracking-widest mb-1">Recuperados</p>
           <p class="text-3xl font-bold text-green-600">${recuperados}</p>
+          <p class="text-xs text-gray-400 mt-1">${total > 0 ? ((recuperados/total)*100).toFixed(1) : 0}% do total</p>
         </div>
         <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
           <p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Em Perda</p>
           <p class="text-3xl font-bold text-red-600">${emPerda}</p>
+          <p class="text-xs text-gray-400 mt-1">${total > 0 ? ((emPerda/total)*100).toFixed(1) : 0}% do total</p>
         </div>
+        <div class="bg-white rounded-xl border border-yellow-200 shadow-sm p-4">
+          <p class="text-xs font-semibold text-yellow-500 uppercase tracking-widest mb-1">Em Aberto</p>
+          <p class="text-3xl font-bold text-yellow-600">${pendentes}</p>
+          <p class="text-xs text-gray-400 mt-1">${taxaEnc}% já encerrados</p>
+        </div>`;
+
+      // ── KPIs linha 2: financeiro
+      const totalBoletos    = d.reduce((s, r) => s + (r.valor_boleto_quitacao || 0), 0);
+      const totalRecupDist  = d.reduce((s, r) => s + (r.valor_pendente_distribuidor || 0), 0);
+      const totalRecupInt   = d.reduce((s, r) => s + (r.valor_pendente_integrador  || 0), 0);
+      const totalRecupPart  = totalRecupDist + totalRecupInt;
+      const totalARecuperar = d.reduce((s, r) => {
+        const falta = (r.valor_projeto||0) - (r.valor_pendente_distribuidor||0) - (r.valor_pendente_integrador||0);
+        return s + (falta > 0 ? falta : 0);
+      }, 0);
+      // Desconto total concedido: casos onde boleto < projeto (quitados abaixo do valor)
+      const descontoTotal   = d.filter(r => r.boleto_emitido === 'Sim' && r.valor_boleto_quitacao > 0)
+        .reduce((s, r) => { const d2 = (r.valor_boleto_quitacao||0) - (r.valor_projeto||0); return s + (d2 > 0 ? d2 : 0); }, 0);
+      document.getElementById('analise-kpis2').innerHTML = `
         <div class="bg-white rounded-xl border border-blue-200 shadow-sm p-4">
-          <p class="text-xs font-semibold text-blue-400 uppercase tracking-widest mb-1">Valor Recuperado</p>
-          <p class="text-xl font-bold text-blue-600">${brl(valorRecup)}</p>
-          <p class="text-xs text-gray-400 mt-0.5">de ${brl(totalValor)} em projetos</p>
+          <p class="text-xs font-semibold text-blue-400 uppercase tracking-widest mb-1">Total Boletos Pagos</p>
+          <p class="text-xl font-bold text-blue-600">${brl(totalBoletos)}</p>
+          <p class="text-xs text-gray-400 mt-1">custo total de quitação</p>
+        </div>
+        <div class="bg-white rounded-xl border border-green-200 shadow-sm p-4">
+          <p class="text-xs font-semibold text-green-400 uppercase tracking-widest mb-1">Recuperado dos Parceiros</p>
+          <p class="text-xl font-bold text-green-600">${brl(totalRecupPart)}</p>
+          <p class="text-xs text-gray-400 mt-1">Dist: ${brl(totalRecupDist)} · Int: ${brl(totalRecupInt)}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-orange-200 shadow-sm p-4">
+          <p class="text-xs font-semibold text-orange-400 uppercase tracking-widest mb-1">A Recuperar dos Parceiros</p>
+          <p class="text-xl font-bold text-orange-600">${brl(totalARecuperar)}</p>
+          <p class="text-xs text-gray-400 mt-1">saldo pendente nos casos</p>
+        </div>
+        <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+          <p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Prejuízo Total (Juros)</p>
+          <p class="text-xl font-bold text-red-600">${brl(descontoTotal)}</p>
+          <p class="text-xs text-gray-400 mt-1">boleto acima do projeto</p>
         </div>`;
 
       // ── Range
@@ -2181,13 +2239,24 @@
       };
 
       let totCnt=0, totVP=0, totVB=0;
+      let prevPct = null; // para Δ MoM
       document.getElementById('analise-mensal-body').innerHTML = mesesOrdenados.map(key => {
         const { count, vProjeto, vBoleto, itens } = mensalMap[key];
-        const diff    = vBoleto - vProjeto;
-        const pct     = vProjeto > 0 ? ((diff / vProjeto) * 100).toFixed(1) : '—';
+        const diff        = vBoleto - vProjeto;
+        const pct         = vProjeto > 0 ? parseFloat(((diff / vProjeto) * 100).toFixed(1)) : null;
+        const ticketMedio = count > 0 ? vProjeto / count : 0;
         totCnt += count; totVP += vProjeto; totVB += vBoleto;
-        // diff > 0 = boleto > projeto = prejuízo (pagou mais); diff < 0 = economia
+        // diff > 0 = boleto > projeto = prejuízo; diff < 0 = economia
         const diffCls = diff > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold';
+        // Δ MoM: variação do % de prejuízo vs mês anterior
+        let momHtml = '<td class="px-3 py-2 text-sm text-right text-gray-400">—</td>';
+        if (prevPct !== null && pct !== null) {
+          const delta   = pct - prevPct;
+          const momCls  = delta > 0 ? 'text-red-500' : 'text-green-600';
+          const momSign = delta > 0 ? '▲' : '▼';
+          momHtml = `<td class="px-3 py-2 text-sm text-right ${momCls} font-semibold">${momSign} ${Math.abs(delta).toFixed(1)}pp</td>`;
+        }
+        prevPct = pct;
         // Linhas de detalhe por CCB (ocultas, expandem ao clicar)
         const detalhe = itens.map(it => {
           const d2   = it.vBoleto - it.vProjeto;
@@ -2196,9 +2265,11 @@
             <td class="pl-8 pr-3 py-1.5 text-xs text-gray-500 font-mono">${esc(it.ccb)}</td>
             <td class="px-3 py-1.5 text-xs text-center text-gray-400">1</td>
             <td class="px-3 py-1.5 text-xs text-right text-gray-600">${brl(it.vProjeto)}</td>
+            <td class="px-3 py-1.5 text-xs text-right text-gray-400">—</td>
             <td class="px-3 py-1.5 text-xs text-right text-gray-600">${brl(it.vBoleto)}</td>
             <td class="px-3 py-1.5 text-xs text-right ${cls2}">${brl(d2)}</td>
             <td class="px-3 py-1.5 text-xs text-right ${cls2}">${it.vProjeto > 0 ? ((d2/it.vProjeto)*100).toFixed(1)+'%' : '—'}</td>
+            <td></td>
           </tr>`;
         }).join('');
         return `<tr class="hover:bg-gray-50 cursor-pointer select-none" onclick="toggleDetalhe('${key}')">
@@ -2207,22 +2278,62 @@
           </td>
           <td class="px-3 py-2 text-sm text-center text-gray-600">${count}</td>
           <td class="px-3 py-2 text-sm text-right text-gray-700">${brl(vProjeto)}</td>
+          <td class="px-3 py-2 text-sm text-right text-gray-500">${brl(ticketMedio)}</td>
           <td class="px-3 py-2 text-sm text-right text-gray-700">${brl(vBoleto)}</td>
           <td class="px-3 py-2 text-sm text-right ${diffCls}">${brl(diff)}</td>
-          <td class="px-3 py-2 text-sm text-right ${diff > 0 ? 'text-red-500' : 'text-green-500'}">${pct}%</td>
+          <td class="px-3 py-2 text-sm text-right ${diff > 0 ? 'text-red-500' : 'text-green-500'}">${pct !== null ? pct.toFixed(1)+'%' : '—'}</td>
+          ${momHtml}
         </tr>${detalhe}`;
       }).join('');
 
-      const totDiff = totVB - totVP;
-      const totPct  = totVP > 0 ? ((totDiff/totVP)*100).toFixed(1) : '—';
+      const totDiff    = totVB - totVP;
+      const totPct     = totVP > 0 ? ((totDiff/totVP)*100).toFixed(1) : '—';
+      const totTicket  = totCnt > 0 ? totVP / totCnt : 0;
       document.getElementById('analise-mensal-foot').innerHTML = `<tr>
         <td class="px-3 py-2.5 text-sm font-bold text-gray-800">Total Geral</td>
         <td class="px-3 py-2.5 text-sm font-bold text-center text-gray-800">${totCnt}</td>
         <td class="px-3 py-2.5 text-sm font-bold text-right text-gray-800">${brl(totVP)}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-right text-gray-600">${brl(totTicket)}</td>
         <td class="px-3 py-2.5 text-sm font-bold text-right text-gray-800">${brl(totVB)}</td>
         <td class="px-3 py-2.5 text-sm font-bold text-right ${totDiff > 0 ? 'text-red-600' : 'text-green-600'}">${brl(totDiff)}</td>
         <td class="px-3 py-2.5 text-sm font-bold text-right ${totDiff > 0 ? 'text-red-500' : 'text-green-500'}">${totPct}%</td>
+        <td></td>
       </tr>`;
+
+      // ── Recuperação por Parceiro (top 10 por valor de projeto)
+      function _recupRows(map, valKey, recupKey, containerId) {
+        const entries = Object.entries(map).sort((a,b) => b[1].vp - a[1].vp).slice(0,10);
+        const maxVP   = entries[0]?.[1].vp || 1;
+        document.getElementById(containerId).innerHTML = entries.map(([nome, m]) => {
+          const pct   = m.vp > 0 ? Math.min(100, (m.rec / m.vp) * 100) : 0;
+          const falta = Math.max(0, m.vp - m.rec);
+          const cls   = pct >= 80 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-400' : 'bg-red-400';
+          return `<div>
+            <div class="flex justify-between text-xs mb-0.5">
+              <span class="text-gray-700 truncate max-w-[55%]" title="${esc(nome)}">${esc(nome)}</span>
+              <span class="text-gray-500">${brl(m.rec)} / ${brl(m.vp)} <span class="font-semibold ${pct >= 80 ? 'text-green-600' : pct >= 40 ? 'text-yellow-600' : 'text-red-500'}">(${pct.toFixed(0)}%)</span></span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-2">
+              <div class="${cls} h-2 rounded-full" style="width:${pct}%"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-0.5">Falta recuperar: ${brl(falta)}</p>
+          </div>`;
+        }).join('') || '<p class="text-xs text-gray-400">Sem dados de recuperação</p>';
+      }
+      const intRecupMap  = {};
+      const distRecupMap = {};
+      d.forEach(r => {
+        const ki = r.integrador   || '(sem integrador)';
+        const kd = r.distribuidor || '(sem distribuidor)';
+        if (!intRecupMap[ki])  intRecupMap[ki]  = { vp:0, rec:0 };
+        if (!distRecupMap[kd]) distRecupMap[kd] = { vp:0, rec:0 };
+        intRecupMap[ki].vp   += r.valor_projeto || 0;
+        intRecupMap[ki].rec  += r.valor_pendente_integrador  || 0;
+        distRecupMap[kd].vp  += r.valor_projeto || 0;
+        distRecupMap[kd].rec += r.valor_pendente_distribuidor || 0;
+      });
+      _recupRows(intRecupMap,  'vp', 'rec', 'analise-recup-integrador');
+      _recupRows(distRecupMap, 'vp', 'rec', 'analise-recup-distribuidor');
 
       // ── Range por mês de solicitação
       const rangeKeys = ['Range 01 - 29','Range 30 - 59','Range 60 - 89','Range 90 - 119','Range 120 - 199','Range 200 >'];
