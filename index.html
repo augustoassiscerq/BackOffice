@@ -1647,13 +1647,13 @@
           || int.includes('R C VIEGAS')      || dist.includes('R C VIEGAS');
     }
 
-    // Regra de negócio: perda = (marcado SIM manualmente OU dias > 121)
+    // Regra de negócio: perda = marcado manualmente como SIM
     //                         E ainda existe saldo a recuperar (falta > 0).
-    // Se o valor foi integralmente recuperado, o caso deixa de ser perda.
+    // Caso o valor seja integralmente recuperado, o caso sai da perda.
+    // A auto-detecção por dias foi removida pois campos de recuperação ainda
+    // podem estar em branco em registros antigos, inflando o número.
     function isPerda(r) {
-      const flagManual = (r.perda || '').toUpperCase() === 'SIM';
-      const diasOk     = (r.dias_solicitacao || 0) > 121;
-      if (!flagManual && !diasOk) return false;
+      if ((r.perda || '').toUpperCase() !== 'SIM') return false;
       const falta = (r.valor_projeto || 0)
                   - (r.valor_pendente_distribuidor || 0)
                   - (r.valor_pendente_integrador   || 0);
