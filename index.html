@@ -2177,11 +2177,12 @@
         const diff    = vBoleto - vProjeto;
         const pct     = vProjeto > 0 ? ((diff / vProjeto) * 100).toFixed(1) : '—';
         totCnt += count; totVP += vProjeto; totVB += vBoleto;
-        const diffCls = diff < 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold';
+        // diff > 0 = boleto > projeto = prejuízo (pagou mais); diff < 0 = economia
+        const diffCls = diff > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold';
         // Linhas de detalhe por CCB (ocultas, expandem ao clicar)
         const detalhe = itens.map(it => {
           const d2   = it.vBoleto - it.vProjeto;
-          const cls2 = d2 < 0 ? 'text-red-500' : 'text-green-600';
+          const cls2 = d2 > 0 ? 'text-red-500' : 'text-green-600';
           return `<tr class="bg-blue-50 border-t border-blue-100 detail-${key} hidden">
             <td class="pl-8 pr-3 py-1.5 text-xs text-gray-500 font-mono">${esc(it.ccb)}</td>
             <td class="px-3 py-1.5 text-xs text-center text-gray-400">1</td>
@@ -2199,7 +2200,7 @@
           <td class="px-3 py-2 text-sm text-right text-gray-700">${brl(vProjeto)}</td>
           <td class="px-3 py-2 text-sm text-right text-gray-700">${brl(vBoleto)}</td>
           <td class="px-3 py-2 text-sm text-right ${diffCls}">${brl(diff)}</td>
-          <td class="px-3 py-2 text-sm text-right ${diff < 0 ? 'text-red-500' : 'text-green-500'}">${pct}%</td>
+          <td class="px-3 py-2 text-sm text-right ${diff > 0 ? 'text-red-500' : 'text-green-500'}">${pct}%</td>
         </tr>${detalhe}`;
       }).join('');
 
@@ -2210,8 +2211,8 @@
         <td class="px-3 py-2.5 text-sm font-bold text-center text-gray-800">${totCnt}</td>
         <td class="px-3 py-2.5 text-sm font-bold text-right text-gray-800">${brl(totVP)}</td>
         <td class="px-3 py-2.5 text-sm font-bold text-right text-gray-800">${brl(totVB)}</td>
-        <td class="px-3 py-2.5 text-sm font-bold text-right ${totDiff < 0 ? 'text-red-600' : 'text-green-600'}">${brl(totDiff)}</td>
-        <td class="px-3 py-2.5 text-sm font-bold text-right ${totDiff < 0 ? 'text-red-500' : 'text-green-500'}">${totPct}%</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-right ${totDiff > 0 ? 'text-red-600' : 'text-green-600'}">${brl(totDiff)}</td>
+        <td class="px-3 py-2.5 text-sm font-bold text-right ${totDiff > 0 ? 'text-red-500' : 'text-green-500'}">${totPct}%</td>
       </tr>`;
 
       // ── Range por mês de solicitação
