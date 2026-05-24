@@ -514,7 +514,7 @@
       <div class="flex items-center justify-between mb-4">
         <div>
           <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Comparativo Mensal — Valor do Projeto × Boleto de Quitação</h3>
-          <p class="text-xs text-gray-400 mt-0.5">Apenas casos com boleto emitido · agrupado por mês de quitação</p>
+          <p class="text-xs text-gray-400 mt-0.5">Apenas casos com boleto emitido e valor preenchido · agrupado por mês de quitação · positivo = juros recuperados · negativo = desconto concedido</p>
         </div>
       </div>
       <div class="overflow-x-auto">
@@ -525,8 +525,8 @@
               <th class="text-center px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Qtd CCBs</th>
               <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Valor do Projeto</th>
               <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Valor Boleto Quitação</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold text-red-400 whitespace-nowrap">Desconto / Prejuízo</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">% Desconto</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Diferença (Boleto − Projeto)</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">% sobre Projeto</th>
             </tr>
           </thead>
           <tbody id="analise-mensal-body" class="divide-y divide-gray-50"></tbody>
@@ -2146,9 +2146,9 @@
       document.getElementById('analise-distribuidores').innerHTML =
         topDist.map(([n, c]) => barRow(n, c, maxDist, 'bg-teal-400')).join('');
 
-      // ── Comparativo Mensal (boleto emitido, agrupado por data_quitacao)
+      // ── Comparativo Mensal (boleto emitido E valor preenchido, agrupado por data_quitacao)
       const mensalMap = {};
-      d.filter(r => r.boleto_emitido === 'Sim' && r.data_quitacao).forEach(r => {
+      d.filter(r => r.boleto_emitido === 'Sim' && r.data_quitacao && r.valor_boleto_quitacao > 0).forEach(r => {
         const dt  = new Date(r.data_quitacao + 'T00:00:00');
         const key = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
         if (!mensalMap[key]) mensalMap[key] = { count:0, vProjeto:0, vBoleto:0 };
