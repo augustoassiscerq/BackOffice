@@ -904,15 +904,15 @@
                 <input id="mc-valor_boleto_quitacao" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
                   oninput="maskBRL(this)" onpaste="pasteBRL(event,this)"></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Recuperado Distribuidor (R$)</label>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Pendente Distribuidor — a devolver (R$)</label>
                 <input id="mc-valor_pendente_distribuidor" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
                   oninput="maskBRL(this); calcFaltaRecuperar()" onpaste="pasteBRL(event,this)"></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Recuperado Integrador (R$)</label>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Pendente Integrador — a devolver (R$)</label>
                 <input id="mc-valor_pendente_integrador" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
                   oninput="maskBRL(this); calcFaltaRecuperar()" onpaste="pasteBRL(event,this)"></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor que Falta Recuperar (R$)</label>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Total Pendente a Recuperar (R$)</label>
                 <input id="mc-valor_falta_recuperar" type="text" placeholder="0,00" readonly
                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm input-brl bg-gray-50 text-gray-700 font-semibold cursor-default"></div>
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Quitação</label>
@@ -1753,17 +1753,18 @@
           || int.includes('R C VIEGAS')      || dist.includes('R C VIEGAS');
     }
 
-    // Regra de negócio: perda = marcado manualmente como SIM
-    //                         E ainda existe saldo a recuperar (falta > 0).
-    // Caso o valor seja integralmente recuperado, o caso sai da perda.
-    // A auto-detecção por dias foi removida pois campos de recuperação ainda
-    // podem estar em branco em registros antigos, inflando o número.
+    // Regra de negócio: perda = marcado como SIM
+    //   E ainda há saldo pendente a recuperar dos parceiros.
+    //   Sai da perda apenas quando totalPendente = 0 e há valor_projeto preenchido
+    //   (i.e., tudo foi devolvido).
     function isPerda(r) {
       if ((r.perda || '').toUpperCase() !== 'SIM') return false;
-      const falta = (r.valor_projeto || 0)
-                  - (r.valor_pendente_distribuidor || 0)
-                  - (r.valor_pendente_integrador   || 0);
-      return falta > 0;
+      const vp            = r.valor_projeto || 0;
+      const totalPendente = (r.valor_pendente_distribuidor || 0)
+                          + (r.valor_pendente_integrador   || 0);
+      // Sai da perda quando o projeto tem valor E tudo foi devolvido
+      if (vp > 0 && totalPendente === 0) return false;
+      return true;
     }
 
     function switchAbaCancel(aba) {
@@ -1949,15 +1950,15 @@
 
     // ── Modal Cancelamento ────────────────────────────────────────
     function calcFaltaRecuperar() {
-      const projeto = parseBRL(document.getElementById('mc-valor_projeto').value) || 0;
-      const dist    = parseBRL(document.getElementById('mc-valor_pendente_distribuidor').value) || 0;
-      const integ   = parseBRL(document.getElementById('mc-valor_pendente_integrador').value) || 0;
-      const falta   = projeto - dist - integ;
-      const el      = document.getElementById('mc-valor_falta_recuperar');
-      const fmt     = v => Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-      el.value      = falta !== 0 ? fmt(falta) : '';
-      el.classList.toggle('text-red-600',  falta > 0);
-      el.classList.toggle('text-green-700', falta <= 0);
+      const dist  = parseBRL(document.getElementById('mc-valor_pendente_distribuidor').value) || 0;
+      const integ = parseBRL(document.getElementById('mc-valor_pendente_integrador').value) || 0;
+      // Total pendente = o que distribuidora + integrador AINDA NÃO devolveram
+      const falta = dist + integ;
+      const el    = document.getElementById('mc-valor_falta_recuperar');
+      const fmt   = v => Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      el.value    = falta > 0 ? fmt(falta) : '';
+      el.classList.toggle('text-red-600',   falta > 0);
+      el.classList.toggle('text-green-700', falta === 0);
     }
 
     function abrirModalCancel(id) {
@@ -2135,17 +2136,18 @@
         };
 
         // ── Auto-calcular PERDA com base nos valores atuais ──────────
-        const _vp    = payload.valor_projeto               || 0;
-        const _vd    = payload.valor_pendente_distribuidor || 0;
-        const _vi    = payload.valor_pendente_integrador   || 0;
-        const _falta = _vp - _vd - _vi;
-        const _dias  = payload.dias_solicitacao            || 0;
+        // valor_pendente_* = o que o parceiro AINDA NÃO devolveu (saldo pendente)
+        const _vp           = payload.valor_projeto               || 0;
+        const _vd           = payload.valor_pendente_distribuidor || 0;
+        const _vi           = payload.valor_pendente_integrador   || 0;
+        const _totalPendente = _vd + _vi; // total ainda a receber dos parceiros
+        const _dias         = payload.dias_solicitacao            || 0;
         if ((payload.status || '').includes('Recuperado Valor Total')) {
           payload.perda = 'NÃO';
-        } else if (_dias > 121 && _falta > 0) {
-          payload.perda = 'SIM';
-        } else if (_falta <= 0 && _vp > 0) {
-          payload.perda = 'NÃO'; // recuperou tudo
+        } else if (_vp > 0 && _totalPendente === 0) {
+          payload.perda = 'NÃO'; // tudo foi devolvido pelos parceiros
+        } else if (_dias > 121 && _totalPendente > 0) {
+          payload.perda = 'SIM'; // mais de 121 dias e ainda há pendente
         } else {
           payload.perda = g('mc-perda').value || null; // mantém valor manual
         }
@@ -2217,10 +2219,11 @@
         'Status Integrador':            r.status_integrador||'',
         'Perda':                        r.perda||'',
         'Resultado':                    r.resultado||'',
-        'Valor Projeto (R$)':           r.valor_projeto||0,
-        'Valor Recuperado Distribuidor': r.valor_pendente_distribuidor||0,
-        'Valor Recuperado Integrador':  r.valor_pendente_integrador||0,
-        'Valor que Falta Recuperar':    ((r.valor_projeto||0) - (r.valor_pendente_distribuidor||0) - (r.valor_pendente_integrador||0)),
+        'Valor Projeto (R$)':              r.valor_projeto||0,
+        'Pendente Distribuidor (R$)':      r.valor_pendente_distribuidor||0,
+        'Pendente Integrador (R$)':        r.valor_pendente_integrador||0,
+        'Total Pendente a Recuperar (R$)': (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0),
+        'Já Recuperado dos Parceiros (R$)': Math.max(0, (r.valor_projeto||0) - (r.valor_pendente_distribuidor||0) - (r.valor_pendente_integrador||0)),
         'Observação':                   r.observacao||'',
       }));
       const ws = XLSX.utils.json_to_sheet(linhas);
@@ -2351,19 +2354,22 @@
         </div>`;
 
       // ── KPIs linha 2: financeiro
-      const totalBoletos    = d.reduce((s, r) => s + (r.valor_boleto_quitacao || 0), 0);
-      const totalRecupDist  = d.reduce((s, r) => s + (r.valor_pendente_distribuidor || 0), 0);
-      const totalRecupInt   = d.reduce((s, r) => s + (r.valor_pendente_integrador  || 0), 0);
-      const totalRecupPart  = totalRecupDist + totalRecupInt;
-      const totalARecuperar = d.reduce((s, r) => {
-        const falta = (r.valor_projeto||0) - (r.valor_pendente_distribuidor||0) - (r.valor_pendente_integrador||0);
-        return s + (falta > 0 ? falta : 0);
+      // valor_pendente_* = o que o parceiro AINDA NÃO devolveu (saldo pendente)
+      const totalBoletos     = d.reduce((s, r) => s + (r.valor_boleto_quitacao || 0), 0);
+      const totalPendenteDist = d.reduce((s, r) => s + (r.valor_pendente_distribuidor || 0), 0);
+      const totalPendenteInt  = d.reduce((s, r) => s + (r.valor_pendente_integrador  || 0), 0);
+      // A Recuperar = o que os parceiros AINDA devem devolver
+      const totalARecuperar  = totalPendenteDist + totalPendenteInt;
+      // Já Recuperado = valor_projeto − o que ainda está pendente (por registro)
+      const totalRecupPart   = d.reduce((s, r) => {
+        const ja = (r.valor_projeto||0) - (r.valor_pendente_distribuidor||0) - (r.valor_pendente_integrador||0);
+        return s + (ja > 0 ? ja : 0);
       }, 0);
       // Prejuízo = boleto > projeto (juros / valor presente acima do projeto)
-      const prejuizoTotal   = d.filter(r => r.boleto_emitido === 'Sim' && r.valor_boleto_quitacao > 0)
+      const prejuizoTotal    = d.filter(r => r.boleto_emitido === 'Sim' && r.valor_boleto_quitacao > 0)
         .reduce((s, r) => { const d2 = (r.valor_boleto_quitacao||0) - (r.valor_projeto||0); return s + (d2 > 0 ? d2 : 0); }, 0);
       // Desconto = boleto < projeto (Sol Agora quitou abaixo do valor)
-      const descontoTotal   = d.filter(r => r.boleto_emitido === 'Sim' && r.valor_boleto_quitacao > 0)
+      const descontoTotal    = d.filter(r => r.boleto_emitido === 'Sim' && r.valor_boleto_quitacao > 0)
         .reduce((s, r) => { const d2 = (r.valor_projeto||0) - (r.valor_boleto_quitacao||0); return s + (d2 > 0 ? d2 : 0); }, 0);
       document.getElementById('analise-kpis2').innerHTML = `
         <div class="bg-white rounded-xl border border-blue-200 shadow-sm p-4">
@@ -2372,14 +2378,14 @@
           <p class="text-xs text-gray-400 mt-1">custo total de quitação</p>
         </div>
         <div class="bg-white rounded-xl border border-green-200 shadow-sm p-4">
-          <p class="text-xs font-semibold text-green-400 uppercase tracking-widest mb-1">Recuperado dos Parceiros</p>
+          <p class="text-xs font-semibold text-green-400 uppercase tracking-widest mb-1">Já Recuperado dos Parceiros</p>
           <p class="text-xl font-bold text-green-600">${brl(totalRecupPart)}</p>
-          <p class="text-xs text-gray-400 mt-1 leading-relaxed">Distribuidor: ${brl(totalRecupDist)}<br>Integrador: ${brl(totalRecupInt)}</p>
+          <p class="text-xs text-gray-400 mt-1 leading-relaxed">Pendente: Dist. ${brl(totalPendenteDist)}<br>Pendente: Int. ${brl(totalPendenteInt)}</p>
         </div>
         <div class="bg-white rounded-xl border border-orange-200 shadow-sm p-4">
           <p class="text-xs font-semibold text-orange-400 uppercase tracking-widest mb-1">A Recuperar dos Parceiros</p>
           <p class="text-xl font-bold text-orange-600">${brl(totalARecuperar)}</p>
-          <p class="text-xs text-gray-400 mt-1">saldo pendente nos casos</p>
+          <p class="text-xs text-gray-400 mt-1 leading-relaxed">Distribuidor: ${brl(totalPendenteDist)}<br>Integrador: ${brl(totalPendenteInt)}</p>
         </div>
         <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
           <p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Resultado de Quitação</p>
@@ -2582,38 +2588,40 @@
         <td></td>
       </tr>`;
 
-      // ── COBRANÇA: casos com saldo pendente a recuperar
+      // ── COBRANÇA: casos com saldo pendente a recuperar dos parceiros
+      // Pendente = o que o parceiro AINDA NÃO devolveu
       const cobCasos = d.filter(r => {
-        const falta = (r.valor_projeto||0) - (r.valor_pendente_distribuidor||0) - (r.valor_pendente_integrador||0);
-        return falta > 0 && r.status !== 'Recuperado Valor Total';
+        const pendente = (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0);
+        return pendente > 0 && r.status !== 'Recuperado Valor Total';
       }).sort((a,b) => {
-        const fa = (a.valor_projeto||0)-(a.valor_pendente_distribuidor||0)-(a.valor_pendente_integrador||0);
-        const fb = (b.valor_projeto||0)-(b.valor_pendente_distribuidor||0)-(b.valor_pendente_integrador||0);
-        return fb - fa;
+        const pa = (a.valor_pendente_distribuidor||0) + (a.valor_pendente_integrador||0);
+        const pb = (b.valor_pendente_distribuidor||0) + (b.valor_pendente_integrador||0);
+        return pb - pa; // maior pendente primeiro
       });
       document.getElementById('analise-cobranca-body').innerHTML = cobCasos.length === 0
         ? '<tr><td colspan="7" class="px-3 py-6 text-center text-sm text-gray-400">Nenhum caso pendente de cobrança</td></tr>'
         : cobCasos.map(r => {
-            const falta    = (r.valor_projeto||0) - (r.valor_pendente_distribuidor||0) - (r.valor_pendente_integrador||0);
-            const recupDist = r.valor_pendente_distribuidor || 0;
-            const recupInt  = r.valor_pendente_integrador   || 0;
-            const cobrarDist = falta > 0 && recupDist < (r.valor_projeto||0);
-            const cobrarInt  = falta > 0 && recupInt  < (r.valor_projeto||0);
-            const quemCobrar = [cobrarDist ? '📦 Distribuidor' : '', cobrarInt ? '👤 Integrador' : ''].filter(Boolean).join(' + ');
+            const pendenteDist = r.valor_pendente_distribuidor || 0;
+            const pendenteInt  = r.valor_pendente_integrador   || 0;
+            const pendente     = pendenteDist + pendenteInt;
+            const cobrarDist   = pendenteDist > 0;
+            const cobrarInt    = pendenteInt  > 0;
+            const quemCobrar   = [cobrarDist ? '📦 Distribuidor' : '', cobrarInt ? '👤 Integrador' : ''].filter(Boolean).join(' + ');
             return `<tr class="hover:bg-orange-50 border-b border-gray-100">
               <td class="px-3 py-2 text-xs font-mono text-gray-600">${esc(r.ccb||'—')}</td>
               <td class="px-3 py-2 text-xs text-gray-700 max-w-[150px] truncate" title="${esc(r.cliente||'')}">${esc(r.cliente||'—')}</td>
               <td class="px-3 py-2 text-xs text-gray-600 truncate max-w-[120px]">${esc(r.distribuidor||'—')}</td>
               <td class="px-3 py-2 text-xs text-gray-600 truncate max-w-[120px]">${esc(r.integrador||'—')}</td>
-              <td class="px-3 py-2 text-xs text-right font-semibold text-orange-600">${brl(falta)}</td>
+              <td class="px-3 py-2 text-xs text-right font-semibold text-orange-600">${brl(pendente)}</td>
               <td class="px-3 py-2 text-xs font-medium text-red-600">${quemCobrar}</td>
               <td class="px-3 py-2 text-center">
-                <button onclick="abrirMensagemCobranca(${JSON.stringify({ccb:r.ccb,cliente:r.cliente,distribuidor:r.distribuidor,integrador:r.integrador,falta}).replace(/"/g,'&quot;')})"
+                <button onclick="abrirMensagemCobranca(${JSON.stringify({ccb:r.ccb,cliente:r.cliente,distribuidor:r.distribuidor,integrador:r.integrador,falta:pendente}).replace(/"/g,'&quot;')})"
                   class="text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-2 py-1 rounded font-medium transition-colors">✉ Mensagem</button>
               </td>
             </tr>`;
           }).join('');
-      document.getElementById('analise-cobranca-count').textContent = `${cobCasos.length} caso${cobCasos.length !== 1 ? 's' : ''} — Total: ${brl(cobCasos.reduce((s,r)=> s + Math.max(0,(r.valor_projeto||0)-(r.valor_pendente_distribuidor||0)-(r.valor_pendente_integrador||0)),0))}`;
+      const totalCobPendente = cobCasos.reduce((s,r) => s + (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0), 0);
+      document.getElementById('analise-cobranca-count').textContent = `${cobCasos.length} caso${cobCasos.length !== 1 ? 's' : ''} — Total pendente: ${brl(totalCobPendente)}`;
 
       // ── TEMPO PENDENTE: dias médios por integrador / distribuidor (casos em aberto)
       const tempIntMap  = {};
