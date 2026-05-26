@@ -1339,7 +1339,7 @@
         return;
       }
 
-      const r5c = (conta + renda * 0.05) - parcela;
+      const r5c = Math.round(((conta + renda * 0.05) - parcela) * 100) / 100;
 
       document.getElementById('resultado-placeholder').classList.add('hidden');
       document.getElementById('resultado-panel').classList.remove('hidden');
@@ -1394,7 +1394,7 @@
         return;
       }
 
-      const r5p = (custoPicoTotal + renda * 0.05) - parcela;
+      const r5p = Math.round(((custoPicoTotal + renda * 0.05) - parcela) * 100) / 100;
 
       secao.classList.remove('hidden');
       document.getElementById('taxa_kwh').textContent =
