@@ -2125,7 +2125,6 @@
           devolvido_integrador:        g('mc-devolvido_integrador').value||null,
           devolvido_distribuidor:      g('mc-devolvido_distribuidor').value||null,
           status_integrador:           g('mc-status_integrador').value.trim()||null,
-          perda:                       g('mc-perda').value||null,
           resultado:                   g('mc-resultado').value||null,
           valor_projeto:               parseBRL(g('mc-valor_projeto').value)||null,
           valor_pendente_distribuidor: parseBRL(g('mc-valor_pendente_distribuidor').value)||null,
@@ -2134,6 +2133,22 @@
           tipo_quitacao:               g('mc-tipo_quitacao').value||null,
           updated_at:                  new Date().toISOString()
         };
+
+        // ── Auto-calcular PERDA com base nos valores atuais ──────────
+        const _vp    = payload.valor_projeto               || 0;
+        const _vd    = payload.valor_pendente_distribuidor || 0;
+        const _vi    = payload.valor_pendente_integrador   || 0;
+        const _falta = _vp - _vd - _vi;
+        const _dias  = payload.dias_solicitacao            || 0;
+        if ((payload.status || '').includes('Recuperado Valor Total')) {
+          payload.perda = 'NÃO';
+        } else if (_dias > 121 && _falta > 0) {
+          payload.perda = 'SIM';
+        } else if (_falta <= 0 && _vp > 0) {
+          payload.perda = 'NÃO'; // recuperou tudo
+        } else {
+          payload.perda = g('mc-perda').value || null; // mantém valor manual
+        }
 
         // 1. Salvar/inserir o registro e obter o ID
         let savedId = editandoCancelId;
@@ -2164,7 +2179,11 @@
         msgOk.textContent = editandoCancelId ? '✅ Atualizado com sucesso!' : '✅ Caso criado com sucesso!';
         msgOk.classList.remove('hidden');
         cacheCancelamentos = [];
-        await carregarCancelamentos();
+        await carregarCancelamentos();          // atualiza KPIs da aba Cancelamentos
+        if (document.getElementById('view-analise') &&
+            !document.getElementById('view-analise').classList.contains('hidden')) {
+          renderizarAnalise();                  // atualiza KPIs da Análise se estiver visível
+        }
         setTimeout(() => fecharModalCancel(), 1500);
       } catch(err) {
         msgErr.textContent = '❌ Erro: ' + (err.message || JSON.stringify(err));
