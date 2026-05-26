@@ -649,16 +649,16 @@
       </div>
     </div>
 
-    <!-- Recuperação por Parceiro -->
+    <!-- Pendente por Parceiro -->
     <div class="grid grid-cols-2 gap-4">
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Recuperação por Integrador</h3>
-        <p class="text-xs text-gray-400 mb-4">Valor do projeto vs. valor já recuperado do integrador</p>
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Pendente por Integrador</h3>
+        <p class="text-xs text-gray-400 mb-4">Valor que o integrador ainda NÃO devolveu (maior pendência primeiro)</p>
         <div id="analise-recup-integrador" class="space-y-3"></div>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Recuperação por Distribuidor</h3>
-        <p class="text-xs text-gray-400 mb-4">Valor do projeto vs. valor já recuperado do distribuidor</p>
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Pendente por Distribuidor</h3>
+        <p class="text-xs text-gray-400 mb-4">Valor que o distribuidor ainda NÃO devolveu (maior pendência primeiro)</p>
         <div id="analise-recup-distribuidor" class="space-y-3"></div>
       </div>
     </div>
@@ -2646,40 +2646,49 @@
       document.getElementById('analise-tempo-int').innerHTML  = topTempInt.map(([n,m])  => tempBar(n, m, maxTI)).join('') || '<p class="text-xs text-gray-400">Sem dados</p>';
       document.getElementById('analise-tempo-dist').innerHTML = topTempDist.map(([n,m]) => tempBar(n, m, maxTD)).join('') || '<p class="text-xs text-gray-400">Sem dados</p>';
 
-      // ── Recuperação por Parceiro (top 10 por valor de projeto)
-      function _recupRows(map, valKey, recupKey, containerId) {
-        const entries = Object.entries(map).sort((a,b) => b[1].vp - a[1].vp).slice(0,10);
-        const maxVP   = entries[0]?.[1].vp || 1;
+      // ── Pendente por Parceiro: ranking por valor ainda não devolvido (top 10)
+      // valor_pendente_integrador = o que o integrador AINDA NÃO devolveu
+      // valor_pendente_distribuidor = o que o distribuidor AINDA NÃO devolveu
+      function _pendRows(map, containerId) {
+        const entries = Object.entries(map).sort((a,b) => b[1].pend - a[1].pend).slice(0,10);
+        const maxPend = entries[0]?.[1].pend || 1;
         document.getElementById(containerId).innerHTML = entries.map(([nome, m]) => {
-          const pct   = m.vp > 0 ? Math.min(100, (m.rec / m.vp) * 100) : 0;
-          const falta = Math.max(0, m.vp - m.rec);
-          const cls   = pct >= 80 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-400' : 'bg-red-400';
+          const pct    = (m.pend / maxPend) * 100;
+          const cls    = pct >= 66 ? 'bg-red-500' : pct >= 33 ? 'bg-orange-400' : 'bg-yellow-400';
+          const clsTxt = pct >= 66 ? 'text-red-600' : pct >= 33 ? 'text-orange-500' : 'text-yellow-600';
           return `<div>
             <div class="flex justify-between text-xs mb-0.5">
               <span class="text-gray-700 truncate max-w-[55%]" title="${esc(nome)}">${esc(nome)}</span>
-              <span class="text-gray-500">${brl(m.rec)} / ${brl(m.vp)} <span class="font-semibold ${pct >= 80 ? 'text-green-600' : pct >= 40 ? 'text-yellow-600' : 'text-red-500'}">(${pct.toFixed(0)}%)</span></span>
+              <span class="font-semibold ${clsTxt}">${brl(m.pend)}
+                <span class="text-gray-400 font-normal">(${m.casos} caso${m.casos>1?'s':''})</span>
+              </span>
             </div>
             <div class="w-full bg-gray-100 rounded-full h-2">
-              <div class="${cls} h-2 rounded-full" style="width:${pct}%"></div>
+              <div class="${cls} h-2 rounded-full" style="width:${pct.toFixed(1)}%"></div>
             </div>
-            <p class="text-xs text-gray-400 mt-0.5">Falta recuperar: ${brl(falta)}</p>
           </div>`;
-        }).join('') || '<p class="text-xs text-gray-400">Sem dados de recuperação</p>';
+        }).join('') || '<p class="text-xs text-gray-400">Nenhum valor pendente</p>';
       }
-      const intRecupMap  = {};
-      const distRecupMap = {};
+      const intPendMap  = {};
+      const distPendMap = {};
       d.forEach(r => {
-        const ki = r.integrador   || '(sem integrador)';
-        const kd = r.distribuidor || '(sem distribuidor)';
-        if (!intRecupMap[ki])  intRecupMap[ki]  = { vp:0, rec:0 };
-        if (!distRecupMap[kd]) distRecupMap[kd] = { vp:0, rec:0 };
-        intRecupMap[ki].vp   += r.valor_projeto || 0;
-        intRecupMap[ki].rec  += r.valor_pendente_integrador  || 0;
-        distRecupMap[kd].vp  += r.valor_projeto || 0;
-        distRecupMap[kd].rec += r.valor_pendente_distribuidor || 0;
+        const pendInt  = r.valor_pendente_integrador   || 0;
+        const pendDist = r.valor_pendente_distribuidor || 0;
+        if (pendInt > 0) {
+          const ki = r.integrador || '(sem integrador)';
+          if (!intPendMap[ki])  intPendMap[ki]  = { pend:0, casos:0 };
+          intPendMap[ki].pend  += pendInt;
+          intPendMap[ki].casos++;
+        }
+        if (pendDist > 0) {
+          const kd = r.distribuidor || '(sem distribuidor)';
+          if (!distPendMap[kd]) distPendMap[kd] = { pend:0, casos:0 };
+          distPendMap[kd].pend  += pendDist;
+          distPendMap[kd].casos++;
+        }
       });
-      _recupRows(intRecupMap,  'vp', 'rec', 'analise-recup-integrador');
-      _recupRows(distRecupMap, 'vp', 'rec', 'analise-recup-distribuidor');
+      _pendRows(intPendMap,  'analise-recup-integrador');
+      _pendRows(distPendMap, 'analise-recup-distribuidor');
 
       // ── Range por mês de solicitação
       const rangeKeys = ['Range 01 - 29','Range 30 - 59','Range 60 - 89','Range 90 - 119','Range 120 - 199','Range 200 >'];
