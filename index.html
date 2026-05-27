@@ -743,53 +743,72 @@
 
   <!-- MODAL: Nova OC -->
   <div id="modal-oc" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+
+      <!-- Cabeçalho -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-        <h2 class="text-base font-bold text-gray-800">Nova Ordem de Compra</h2>
+        <div>
+          <h2 class="text-base font-bold text-gray-800">Nova Ordem de Compra</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Contratos sem boleto gerado · marque os que entram nesta OC e preencha o valor de quitação</p>
+        </div>
         <button onclick="fecharModalOC()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
       </div>
-      <div class="overflow-y-auto flex-1 px-6 py-4 space-y-4">
-        <!-- Número da OC -->
+
+      <!-- Campos OC -->
+      <div class="px-6 py-3 border-b border-gray-100 flex-shrink-0 bg-gray-50">
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">Número da OC <span class="text-red-500">*</span></label>
             <input id="oc-numero" type="text" placeholder="Ex.: OC-2024-001"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">Observação</label>
             <input id="oc-obs" type="text"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
           </div>
         </div>
-
-        <!-- Tabela de CCBs -->
-        <div>
-          <label class="block text-xs font-medium text-gray-600 mb-2">CCBs vinculadas <span class="text-red-500">*</span></label>
-          <div class="border border-gray-200 rounded-lg overflow-hidden">
-            <table class="w-full text-sm">
-              <thead class="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 w-1/3">CCB</th>
-                  <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 w-1/3">Valor de Quitação (R$)</th>
-                  <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 w-1/3">Tipo</th>
-                  <th class="px-2 py-2 w-8"></th>
-                </tr>
-              </thead>
-              <tbody id="oc-itens-body"></tbody>
-            </table>
-          </div>
-          <button type="button" onclick="addOCItem()"
-            class="mt-2 text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 transition-colors">
-            <span class="text-base leading-none">+</span> Adicionar CCB
-          </button>
-        </div>
-
-        <p id="oc-msg-err" class="hidden text-xs text-red-600 bg-red-50 rounded-lg py-2 px-3"></p>
       </div>
+
+      <!-- Tabela de candidatos -->
+      <div class="overflow-y-auto flex-1">
+        <!-- Barra de seleção -->
+        <div class="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between sticky top-0 z-10">
+          <span id="oc-sel-count" class="text-xs text-blue-700 font-medium">Nenhum contrato selecionado</span>
+          <span class="text-xs text-gray-400">Preencha o Valor de Quitação nas linhas que deseja incluir</span>
+        </div>
+
+        <table class="w-full min-w-max text-sm">
+          <thead class="bg-gray-50 border-b border-gray-200 sticky top-[37px] z-10">
+            <tr>
+              <th class="px-3 py-2 w-10">
+                <input type="checkbox" id="oc-chk-all" onchange="toggleTodosOC(this)" class="rounded cursor-pointer">
+              </th>
+              <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">CCB</th>
+              <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 min-w-[160px]">Cliente</th>
+              <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 min-w-[140px]">Distribuidor</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500 whitespace-nowrap">Valor Projeto</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-gray-500">Dias</th>
+              <th class="text-center px-3 py-2 text-xs font-semibold text-gray-500">Range</th>
+              <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500 min-w-[180px]">Status</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-blue-600 whitespace-nowrap">Valor Quitação (R$)</th>
+              <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500">Tipo</th>
+            </tr>
+          </thead>
+          <tbody id="oc-candidatos-body" class="divide-y divide-gray-50"></tbody>
+        </table>
+
+        <div id="oc-sem-candidatos" class="hidden text-center py-16 text-gray-400 text-sm">
+          ✅ Todos os contratos já possuem boleto gerado ou estão quitados.
+        </div>
+        <div id="oc-cand-loading" class="hidden text-center py-16 text-gray-400 text-sm">⏳ Carregando contratos...</div>
+      </div>
+
+      <!-- Rodapé -->
       <div class="flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-200 flex-shrink-0">
-        <p id="oc-total-label" class="text-sm font-semibold text-gray-600"></p>
-        <div class="flex gap-3">
+        <p id="oc-total-label" class="text-sm font-semibold text-gray-700"></p>
+        <div class="flex items-center gap-3">
+          <p id="oc-msg-err" class="hidden text-xs text-red-600 bg-red-50 rounded-lg py-1.5 px-3"></p>
           <button onclick="fecharModalOC()"
             class="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
           <button id="oc-btn-salvar" onclick="criarOC()"
@@ -2946,35 +2965,104 @@ Equipe Sol Agora — Backoffice`;
       </tr>`;
     }
 
-    function addOCItem() {
-      document.getElementById('oc-itens-body').insertAdjacentHTML('beforeend', _ocItemRowHtml());
+    function _atualizarTotalOC() {
+      const checked = [...document.querySelectorAll('.oc-chk:checked')];
+      const total   = checked.reduce((s, chk) => s + (parseBRL(chk.closest('tr').querySelector('.oc-valor').value) || 0), 0);
+      const el      = document.getElementById('oc-total-label');
+      const selEl   = document.getElementById('oc-sel-count');
+      if (checked.length > 0) {
+        const c = checked.length;
+        el.textContent    = `${c} CCB${c !== 1 ? 's' : ''} selecionada${c !== 1 ? 's' : ''} · Total: ${brl(total)}`;
+        selEl.textContent = `${c} contrato${c !== 1 ? 's' : ''} selecionado${c !== 1 ? 's' : ''}`;
+      } else {
+        el.textContent    = '';
+        selEl.textContent = 'Nenhum contrato selecionado';
+      }
     }
 
-    function removeOCItem(btn) {
-      const rows = document.querySelectorAll('.oc-item-row');
-      if (rows.length <= 1) return; // manter pelo menos 1 linha
-      btn.closest('tr').remove();
+    function toggleTodosOC(masterChk) {
+      document.querySelectorAll('.oc-chk').forEach(chk => chk.checked = masterChk.checked);
       _atualizarTotalOC();
     }
 
-    function _atualizarTotalOC() {
-      const total = [...document.querySelectorAll('.oc-valor')]
-        .reduce((s, el) => s + (parseBRL(el.value) || 0), 0);
-      const el = document.getElementById('oc-total-label');
-      el.textContent = total > 0 ? `Total: ${brl(total)}` : '';
+    function _renderCandidatosOC() {
+      const tbody   = document.getElementById('oc-candidatos-body');
+      const semDiv  = document.getElementById('oc-sem-candidatos');
+      const chkAll  = document.getElementById('oc-chk-all');
+
+      const candidatos = cacheCancelamentos.filter(r => {
+        const bEmitido = (r.boleto_emitido || '').toLowerCase() === 'sim';
+        const bPago    = (r.boleto_pago    || '').toLowerCase() === 'sim';
+        return !bEmitido && !bPago;
+      }).sort((a, b) => (b.dias_solicitacao || 0) - (a.dias_solicitacao || 0));
+
+      if (!candidatos.length) {
+        tbody.innerHTML = '';
+        semDiv.classList.remove('hidden');
+        chkAll.disabled = true;
+        _atualizarTotalOC();
+        return;
+      }
+      semDiv.classList.add('hidden');
+      chkAll.disabled = false;
+
+      tbody.innerHTML = candidatos.map(r => {
+        const dias    = r.dias_solicitacao || 0;
+        const diaClr  = dias > 120 ? 'text-red-600 font-bold' : dias > 60 ? 'text-orange-500 font-semibold' : 'text-gray-600';
+        const rangeClr = (r.range_prazo || '').includes('120') || (r.range_prazo || '').includes('200')
+                         ? 'bg-red-100 text-red-700' : (r.range_prazo || '').includes('90')
+                         ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600';
+        return `<tr class="hover:bg-blue-50 transition-colors" data-ccb="${esc(r.ccb||'')}">
+          <td class="px-3 py-2 text-center">
+            <input type="checkbox" class="oc-chk rounded cursor-pointer" onchange="_atualizarTotalOC()">
+          </td>
+          <td class="px-3 py-2 text-xs font-mono font-semibold text-gray-800 whitespace-nowrap">${esc(r.ccb||'—')}</td>
+          <td class="px-3 py-2 text-xs text-gray-700 max-w-[160px] truncate" title="${esc(r.cliente||'')}">${esc(r.cliente||'—')}</td>
+          <td class="px-3 py-2 text-xs text-gray-600 max-w-[140px] truncate" title="${esc(r.distribuidor||'')}">${esc(r.distribuidor||'—')}</td>
+          <td class="px-3 py-2 text-xs text-right font-semibold text-gray-700 whitespace-nowrap">${r.valor_projeto ? brl(r.valor_projeto) : '—'}</td>
+          <td class="px-3 py-2 text-xs text-center ${diaClr} whitespace-nowrap">${dias}</td>
+          <td class="px-3 py-2 text-center whitespace-nowrap">
+            <span class="px-1.5 py-0.5 rounded text-xs font-medium ${rangeClr}">${esc(r.range_prazo||'—')}</span>
+          </td>
+          <td class="px-3 py-2 text-xs text-gray-500 max-w-[180px] truncate" title="${esc(r.status||'')}">${esc(r.status||'—')}</td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            <input type="text" class="oc-valor input-brl border border-blue-200 rounded px-2 py-1 text-xs w-32 text-right focus:outline-none focus:ring-1 focus:ring-blue-400 bg-blue-50"
+              placeholder="0,00" oninput="maskBRL(this); _atualizarTotalOC()" onpaste="pasteBRL(event,this)">
+          </td>
+          <td class="px-3 py-2">
+            <select class="oc-tipo border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 w-36">
+              <option value="">— Tipo —</option>
+              <option>Valor Presente</option>
+              <option>Valor do Projeto</option>
+              <option>Equipamento</option>
+              <option>Serviço</option>
+            </select>
+          </td>
+        </tr>`;
+      }).join('');
+
+      _atualizarTotalOC();
     }
 
-    function abrirModalOC() {
+    async function abrirModalOC() {
       document.getElementById('oc-numero').value = '';
       document.getElementById('oc-obs').value    = '';
       document.getElementById('oc-msg-err').classList.add('hidden');
       document.getElementById('oc-total-label').textContent = '';
       document.getElementById('oc-btn-salvar').disabled    = false;
       document.getElementById('oc-btn-salvar').textContent = '💾 Criar OC';
-      // Inicializar com uma linha vazia
-      document.getElementById('oc-itens-body').innerHTML = _ocItemRowHtml();
+      document.getElementById('oc-chk-all').checked = false;
       document.getElementById('modal-oc').classList.remove('hidden');
       document.body.style.overflow = 'hidden';
+
+      if (cacheCancelamentos.length === 0) {
+        document.getElementById('oc-cand-loading').classList.remove('hidden');
+        document.getElementById('oc-sem-candidatos').classList.add('hidden');
+        document.getElementById('oc-candidatos-body').innerHTML = '';
+        await carregarCancelamentos();
+        document.getElementById('oc-cand-loading').classList.add('hidden');
+      }
+      _renderCandidatosOC();
     }
 
     function fecharModalOC() {
@@ -3078,14 +3166,17 @@ Equipe Sol Agora — Backoffice`;
 
       if (!numero) { msgErr.textContent = 'Informe o número da OC.'; msgErr.classList.remove('hidden'); return; }
 
-      // Coletar itens da tabela
-      const itens = [...document.querySelectorAll('.oc-item-row')].map(row => ({
-        ccb:   row.querySelector('.oc-ccb').value.trim(),
-        valor: parseBRL(row.querySelector('.oc-valor').value) || null,
-        tipo:  row.querySelector('.oc-tipo').value || null,
-      })).filter(it => it.ccb);
+      // Coletar itens a partir dos checkboxes marcados
+      const itens = [...document.querySelectorAll('.oc-chk:checked')].map(chk => {
+        const row = chk.closest('tr');
+        return {
+          ccb:   row.dataset.ccb,
+          valor: parseBRL(row.querySelector('.oc-valor').value) || null,
+          tipo:  row.querySelector('.oc-tipo').value || null,
+        };
+      }).filter(it => it.ccb);
 
-      if (!itens.length) { msgErr.textContent = 'Informe pelo menos uma CCB.'; msgErr.classList.remove('hidden'); return; }
+      if (!itens.length) { msgErr.textContent = 'Selecione pelo menos um contrato.'; msgErr.classList.remove('hidden'); return; }
 
       btn.disabled = true; btn.textContent = '⏳ Salvando...';
       try {
