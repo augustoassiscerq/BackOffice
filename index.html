@@ -780,7 +780,6 @@
           class="px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-800 -mb-px transition-all">
           ⚠️ Resolve
         </button>
-        <span id="oc-aba-badge" class="ml-3 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hidden">golpe — atenção</span>
       </div>
 
       <!-- Tabela de candidatos -->
@@ -3003,8 +3002,6 @@ Equipe Sol Agora — Backoffice`;
       const aInativo = 'px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-800 -mb-px transition-all';
       document.getElementById('oc-aba-cancel-btn').className  = aba === 'cancel'  ? aAtivo : aInativo;
       document.getElementById('oc-aba-resolve-btn').className = aba === 'resolve' ? aAtivo : aInativo;
-      const badge = document.getElementById('oc-aba-badge');
-      badge.classList.toggle('hidden', aba !== 'resolve');
       // Reset master checkbox
       document.getElementById('oc-chk-all').checked = false;
       _renderCandidatosOC();
@@ -3071,10 +3068,8 @@ Equipe Sol Agora — Backoffice`;
           <td class="px-3 py-2">
             <select class="oc-tipo border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 w-36">
               <option value="">— Tipo —</option>
-              <option>Valor Presente</option>
               <option>Valor do Projeto</option>
-              <option>Equipamento</option>
-              <option>Serviço</option>
+              <option>Valor Presente</option>
             </select>
           </td>
         </tr>`;
