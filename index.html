@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -770,10 +770,23 @@
         </div>
       </div>
 
+      <!-- Sub-abas Cancelamentos / Resolve -->
+      <div class="flex items-center border-b border-gray-200 px-6 flex-shrink-0 bg-white">
+        <button id="oc-aba-cancel-btn" onclick="switchAbaOC('cancel')"
+          class="px-5 py-2.5 text-sm font-semibold border-b-2 border-blue-600 text-blue-700 -mb-px transition-all">
+          Cancelamentos
+        </button>
+        <button id="oc-aba-resolve-btn" onclick="switchAbaOC('resolve')"
+          class="px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-800 -mb-px transition-all">
+          ⚠️ Resolve
+        </button>
+        <span id="oc-aba-badge" class="ml-3 px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hidden">golpe — atenção</span>
+      </div>
+
       <!-- Tabela de candidatos -->
       <div class="overflow-y-auto flex-1">
         <!-- Barra de seleção -->
-        <div class="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between sticky top-0 z-10">
+        <div id="oc-sel-bar" class="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between sticky top-0 z-10">
           <span id="oc-sel-count" class="text-xs text-blue-700 font-medium">Nenhum contrato selecionado</span>
           <span class="text-xs text-gray-400">Preencha o Valor de Quitação nas linhas que deseja incluir</span>
         </div>
@@ -799,7 +812,7 @@
         </table>
 
         <div id="oc-sem-candidatos" class="hidden text-center py-16 text-gray-400 text-sm">
-          ✅ Todos os contratos já possuem boleto gerado ou estão quitados.
+          ✅ Nenhum contrato pendente nesta categoria.
         </div>
         <div id="oc-cand-loading" class="hidden text-center py-16 text-gray-400 text-sm">⏳ Carregando contratos...</div>
       </div>
@@ -2970,14 +2983,31 @@ Equipe Sol Agora — Backoffice`;
       const total   = checked.reduce((s, chk) => s + (parseBRL(chk.closest('tr').querySelector('.oc-valor').value) || 0), 0);
       const el      = document.getElementById('oc-total-label');
       const selEl   = document.getElementById('oc-sel-count');
+      const isRes   = abaModalOC === 'resolve';
       if (checked.length > 0) {
         const c = checked.length;
         el.textContent    = `${c} CCB${c !== 1 ? 's' : ''} selecionada${c !== 1 ? 's' : ''} · Total: ${brl(total)}`;
         selEl.textContent = `${c} contrato${c !== 1 ? 's' : ''} selecionado${c !== 1 ? 's' : ''}`;
+        el.className      = `text-sm font-semibold ${isRes ? 'text-orange-700' : 'text-gray-700'}`;
       } else {
         el.textContent    = '';
         selEl.textContent = 'Nenhum contrato selecionado';
       }
+    }
+
+    let abaModalOC = 'cancel'; // 'cancel' | 'resolve'
+
+    function switchAbaOC(aba) {
+      abaModalOC = aba;
+      const aAtivo   = 'px-5 py-2.5 text-sm font-semibold border-b-2 border-blue-600 text-blue-700 -mb-px transition-all';
+      const aInativo = 'px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-800 -mb-px transition-all';
+      document.getElementById('oc-aba-cancel-btn').className  = aba === 'cancel'  ? aAtivo : aInativo;
+      document.getElementById('oc-aba-resolve-btn').className = aba === 'resolve' ? aAtivo : aInativo;
+      const badge = document.getElementById('oc-aba-badge');
+      badge.classList.toggle('hidden', aba !== 'resolve');
+      // Reset master checkbox
+      document.getElementById('oc-chk-all').checked = false;
+      _renderCandidatosOC();
     }
 
     function toggleTodosOC(masterChk) {
@@ -2989,11 +3019,19 @@ Equipe Sol Agora — Backoffice`;
       const tbody   = document.getElementById('oc-candidatos-body');
       const semDiv  = document.getElementById('oc-sem-candidatos');
       const chkAll  = document.getElementById('oc-chk-all');
+      const selBar  = document.getElementById('oc-sel-bar');
+
+      // Cor da barra de seleção muda para laranja na aba Resolve
+      const isResolveAba = abaModalOC === 'resolve';
+      selBar.className = `px-4 py-2 ${isResolveAba ? 'bg-orange-50 border-b border-orange-100' : 'bg-blue-50 border-b border-blue-100'} flex items-center justify-between sticky top-0 z-10`;
+      const selCount = document.getElementById('oc-sel-count');
+      selCount.className = `text-xs font-medium ${isResolveAba ? 'text-orange-700' : 'text-blue-700'}`;
 
       const candidatos = cacheCancelamentos.filter(r => {
         const bEmitido = (r.boleto_emitido || '').toLowerCase() === 'sim';
         const bPago    = (r.boleto_pago    || '').toLowerCase() === 'sim';
-        return !bEmitido && !bPago;
+        const isResolve = isResolveCase(r);
+        return !bEmitido && !bPago && (isResolveAba ? isResolve : !isResolve);
       }).sort((a, b) => (b.dias_solicitacao || 0) - (a.dias_solicitacao || 0));
 
       if (!candidatos.length) {
@@ -3012,7 +3050,8 @@ Equipe Sol Agora — Backoffice`;
         const rangeClr = (r.range_prazo || '').includes('120') || (r.range_prazo || '').includes('200')
                          ? 'bg-red-100 text-red-700' : (r.range_prazo || '').includes('90')
                          ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600';
-        return `<tr class="hover:bg-blue-50 transition-colors" data-ccb="${esc(r.ccb||'')}">
+        const rowBg = isResolveAba ? 'hover:bg-orange-100' : 'hover:bg-blue-50';
+        return `<tr class="${rowBg} transition-colors" data-ccb="${esc(r.ccb||'')}">
           <td class="px-3 py-2 text-center">
             <input type="checkbox" class="oc-chk rounded cursor-pointer" onchange="_atualizarTotalOC()">
           </td>
@@ -3052,6 +3091,9 @@ Equipe Sol Agora — Backoffice`;
       document.getElementById('oc-btn-salvar').disabled    = false;
       document.getElementById('oc-btn-salvar').textContent = '💾 Criar OC';
       document.getElementById('oc-chk-all').checked = false;
+      abaModalOC = 'cancel';
+      // Resetar visual das abas
+      switchAbaOC('cancel');
       document.getElementById('modal-oc').classList.remove('hidden');
       document.body.style.overflow = 'hidden';
 
