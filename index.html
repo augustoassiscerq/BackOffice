@@ -3306,11 +3306,12 @@ Equipe Sol Agora — Backoffice`;
           .insert({ numero_oc: numero, itens, observacao: obs || null });
         if (ocErr) throw ocErr;
 
-        // 2. Atualizar cada cancelamento com numero_oc e seu valor individual
+        // 2. Atualizar cada cancelamento com numero_oc/numero_ordem e seu valor individual
         btn.textContent = '⏳ Atualizando CCBs...';
         for (const it of itens) {
           await db.from('cancelamentos').update({
-            numero_oc:            numero,
+            numero_oc:             numero,
+            numero_ordem:          numero,   // reflete no campo "Nº da Ordem" do formulário
             valor_boleto_quitacao: it.valor,
             boleto_emitido:        'Sim',
             updated_at:            new Date().toISOString()
@@ -3337,7 +3338,8 @@ Equipe Sol Agora — Backoffice`;
           if (it.ccb) await db.from('cancelamentos')
             .update({ boleto_pago: 'Sim', updated_at: new Date().toISOString() }).eq('ccb', it.ccb);
         }
-        cacheCancelamentos = [];
+        // Recarregar cancelamentos imediatamente para o cache refletir boleto_pago atualizado
+        await carregarCancelamentos();
         await carregarOCs();
       } catch (err) { alert('Erro: ' + err.message); }
     }
@@ -3352,7 +3354,8 @@ Equipe Sol Agora — Backoffice`;
           if (it.ccb) await db.from('cancelamentos')
             .update({ boleto_pago: 'Não', updated_at: new Date().toISOString() }).eq('ccb', it.ccb);
         }
-        cacheCancelamentos = [];
+        // Recarregar cancelamentos imediatamente para o cache refletir boleto_pago atualizado
+        await carregarCancelamentos();
         await carregarOCs();
       } catch (err) { alert('Erro: ' + err.message); }
     }
