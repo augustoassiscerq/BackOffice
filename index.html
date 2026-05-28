@@ -3363,11 +3363,22 @@ Equipe Sol Agora — Backoffice`;
     async function excluirOC(id) {
       const oc = cacheOCs.find(o => o.id === id);
       if (!oc) return;
-      if (!confirm(`Excluir a OC "${oc.numero_oc}"?\n\nOs dados das CCBs vinculadas não serão revertidos.`)) return;
+      if (!confirm(`Excluir a OC "${oc.numero_oc}"?\n\nOs contratos vinculados voltarão a aparecer como candidatos.`)) return;
       try {
+        // Reverter os cancelamentos vinculados antes de excluir a OC
+        for (const it of (oc.itens || [])) {
+          if (it.ccb) await db.from('cancelamentos').update({
+            numero_oc:      null,
+            numero_ordem:   null,
+            boleto_emitido: 'Não',
+            updated_at:     new Date().toISOString()
+          }).eq('ccb', it.ccb);
+        }
         const { error } = await db.from('ordens_compra').delete().eq('id', id);
         if (error) throw error;
         cacheOCs = cacheOCs.filter(o => o.id !== id);
+        // Recarregar cancelamentos para refletir os campos revertidos
+        await carregarCancelamentos();
         renderizarOCs();
       } catch (err) { alert('Erro: ' + err.message); }
     }
