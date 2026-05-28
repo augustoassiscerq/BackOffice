@@ -905,10 +905,6 @@
                     <option>Integrador - Cobrar VP</option>
                   </optgroup>
                 </select></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Cliente Confirmou?</label>
-                <select id="mc-cliente_confirmou" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                  <option value="">—</option><option>Sim</option><option>Não</option>
-                </select></div>
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Perda (auto)</label>
                 <div id="mc-perda-display" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 font-semibold text-gray-500">—</div>
                 <input type="hidden" id="mc-perda" value=""></div>
@@ -922,23 +918,6 @@
                 </select></div>
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Data da Quitação</label>
                 <input id="mc-data_quitacao" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Devolvido Integrador?</label>
-                <select id="mc-devolvido_integrador" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                  <option value="">—</option><option>Sim</option><option>Não</option>
-                </select></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Devolvido Distribuidor?</label>
-                <select id="mc-devolvido_distribuidor" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                  <option value="">—</option><option>Sim</option><option>Não</option>
-                </select></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Status Integrador</label>
-                <input id="mc-status_integrador" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Resultado</label>
-                <select id="mc-resultado" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                  <option value="">—</option>
-                  <option>Alocado em perdas</option>
-                  <option>61 e 90 dias</option>
-                  <option>91 e 120 dias</option>
-                </select></div>
             </div>
           </div>
 
@@ -2129,13 +2108,8 @@
       set('mc-data_solicitacao', r.data_solicitacao||'');
       set('mc-dias_solicitacao', r.dias_solicitacao??'');
       set('mc-range_prazo', r.range_prazo);       set('mc-status', r.status);
-      set('mc-cliente_confirmou', r.cliente_confirmou);
       set('mc-boleto_emitido', r.boleto_emitido); set('mc-boleto_pago', r.boleto_pago);
       set('mc-data_quitacao', r.data_quitacao||'');
-      set('mc-devolvido_integrador', r.devolvido_integrador);
-      set('mc-devolvido_distribuidor', r.devolvido_distribuidor);
-      set('mc-status_integrador', r.status_integrador);
-      set('mc-perda', r.perda);                   set('mc-resultado', r.resultado);
       set('mc-observacao', r.observacao);
       set('mc-valor_projeto',                fmtBrl(r.valor_projeto));
       set('mc-valor_presente',               fmtBrl(r.valor_presente));
@@ -2266,14 +2240,9 @@
           dias_solicitacao:             parseInt(g('mc-dias_solicitacao').value)||null,
           range_prazo:                  g('mc-range_prazo').value||null,
           status:                       g('mc-status').value||null,
-          cliente_confirmou:            g('mc-cliente_confirmou').value||null,
           boleto_emitido:               g('mc-boleto_emitido').value||null,
           boleto_pago:                  g('mc-boleto_pago').value||null,
           data_quitacao:                g('mc-data_quitacao').value||null,
-          devolvido_integrador:         g('mc-devolvido_integrador').value||null,
-          devolvido_distribuidor:       g('mc-devolvido_distribuidor').value||null,
-          status_integrador:            g('mc-status_integrador').value.trim()||null,
-          resultado:                    g('mc-resultado').value||null,
           valor_projeto:                pBRL('mc-valor_projeto'),
           valor_presente:               pBRL('mc-valor_presente'),
           valor_boleto_quitacao:        pBRL('mc-valor_boleto_quitacao'),
