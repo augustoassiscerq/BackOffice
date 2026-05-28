@@ -3365,14 +3365,18 @@ Equipe Sol Agora — Backoffice`;
       if (!oc) return;
       if (!confirm(`Excluir a OC "${oc.numero_oc}"?\n\nOs contratos vinculados voltarão a aparecer como candidatos.`)) return;
       try {
-        // Reverter os cancelamentos vinculados antes de excluir a OC
-        for (const it of (oc.itens || [])) {
-          if (it.ccb) await db.from('cancelamentos').update({
-            numero_oc:      null,
-            numero_ordem:   null,
-            boleto_emitido: 'Não',
-            updated_at:     new Date().toISOString()
-          }).eq('ccb', it.ccb);
+        // Reverter TODOS os campos que criarOC/marcarOCPaga escreveram
+        const ccbs = (oc.itens || []).map(it => it.ccb).filter(Boolean);
+        if (ccbs.length) {
+          const { error: revErr } = await db.from('cancelamentos').update({
+            numero_oc:             null,
+            numero_ordem:          null,
+            boleto_emitido:        'Não',
+            boleto_pago:           'Não',
+            valor_boleto_quitacao: null,
+            updated_at:            new Date().toISOString()
+          }).in('ccb', ccbs);
+          if (revErr) throw revErr;
         }
         const { error } = await db.from('ordens_compra').delete().eq('id', id);
         if (error) throw error;
