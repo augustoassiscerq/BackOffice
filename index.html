@@ -1986,6 +1986,9 @@
         if (error) throw error;
         cacheCancelamentos = cacheCancelamentos.filter(r => r.id !== id);
         filtrarCancelamentos();
+        // Atualiza Análise se estiver visível
+        const _ap = document.getElementById('cancel-analise-panel');
+        if (_ap && !_ap.classList.contains('hidden')) renderizarAnalise();
       } catch (err) {
         alert('Erro ao excluir: ' + (err.message || JSON.stringify(err)));
       }
@@ -2378,7 +2381,8 @@
           return (restDist + restInt) > 0;
         });
       } else {
-        d = cacheCancelamentos.filter(r => !isResolveCase(r));
+        // "todos" = cancelamentos regulares: sem Resolve e sem Perda (igual ao render)
+        d = cacheCancelamentos.filter(r => !isResolveCase(r) && !isPerda(r));
       }
       if (!d.length) { alert('Sem dados para exportar.'); return; }
 
