@@ -2246,6 +2246,25 @@
           updated_at:                   new Date().toISOString()
         };
 
+        // ── Auto-zerar pendente quando devolvido cobre o pendente ────
+        const _devDist = payload.valor_devolvido_distribuidor || 0;
+        const _devInt  = payload.valor_devolvido_integrador   || 0;
+        if (_devDist > 0 && _devDist >= (payload.valor_pendente_distribuidor || 0)) {
+          payload.valor_pendente_distribuidor = 0;
+        }
+        if (_devInt > 0 && _devInt >= (payload.valor_pendente_integrador || 0)) {
+          payload.valor_pendente_integrador = 0;
+        }
+        // Se tudo foi devolvido → status = Recuperado Valor Total
+        const _pendTotalNovo = (payload.valor_pendente_distribuidor || 0)
+                             + (payload.valor_pendente_integrador   || 0);
+        if (_pendTotalNovo === 0 && (_devDist > 0 || _devInt > 0)) {
+          payload.status = 'Recuperado Valor Total';
+          // Atualiza o campo visual do formulário
+          const statusSel = g('mc-status');
+          if (statusSel) statusSel.value = 'Recuperado Valor Total';
+        }
+
         // ── Auto-calcular PERDA com base nos valores atuais ──────────
         // pendente_* = o que o parceiro AINDA NÃO devolveu
         // devolvido_* = o que o parceiro JÁ devolveu
@@ -2253,8 +2272,7 @@
         const _vBoleto      = payload.valor_boleto_quitacao       || 0;
         const _pendTotal    = (payload.valor_pendente_distribuidor || 0)
                             + (payload.valor_pendente_integrador   || 0);
-        const _devTotal     = (payload.valor_devolvido_distribuidor || 0)
-                            + (payload.valor_devolvido_integrador   || 0);
+        const _devTotal     = (_devDist) + (_devInt);
         // benchmark: VP (boleto) se tipo=Valor Presente, senão valor do projeto
         const _benchmark    = (payload.tipo_quitacao === 'Valor Presente' && _vBoleto > 0)
                             ? _vBoleto : _vp;
@@ -2299,9 +2317,10 @@
         msgOk.classList.remove('hidden');
         cacheCancelamentos = [];
         await carregarCancelamentos();          // atualiza KPIs da aba Cancelamentos
-        if (document.getElementById('view-analise') &&
-            !document.getElementById('view-analise').classList.contains('hidden')) {
-          renderizarAnalise();                  // atualiza KPIs da Análise se estiver visível
+        // Se o painel de análise estiver visível, recarrega também
+        const _analisePanel = document.getElementById('cancel-analise-panel');
+        if (_analisePanel && !_analisePanel.classList.contains('hidden')) {
+          carregarAnalise();
         }
         setTimeout(() => fecharModalCancel(), 1500);
       } catch(err) {
