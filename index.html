@@ -2551,10 +2551,11 @@
         </div>`;
 
       // ── KPIs linha 2: financeiro ─────────────────────────────────
-      // Já Recuperado = soma de tudo que os parceiros JÁ devolveram
+      // Já Recuperado = devolvido pelos parceiros + valor retido (retido = já recuperamos)
       const totalDevolvDist = d.reduce((s, r) => s + (r.valor_devolvido_distribuidor || 0), 0);
       const totalDevolvInt  = d.reduce((s, r) => s + (r.valor_devolvido_integrador   || 0), 0);
-      const totalJaRecup    = totalDevolvDist + totalDevolvInt;
+      const totalRetido     = d.reduce((s, r) => s + (r.valor_retido                 || 0), 0);
+      const totalJaRecup    = totalDevolvDist + totalDevolvInt + totalRetido;
       // A Recuperar = (pend_dist + pend_int) - (dev_dist + dev_int) - valor_retido
       const totalARecuperar = d.reduce((s, r) => {
         const bruto   = (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0);
@@ -2580,7 +2581,7 @@
         <div class="bg-white rounded-xl border border-green-200 shadow-sm p-4">
           <p class="text-xs font-semibold text-green-400 uppercase tracking-widest mb-1">Já Recuperado dos Parceiros</p>
           <p class="text-xl font-bold text-green-600">${brl(totalJaRecup)}</p>
-          <p class="text-xs text-gray-400 mt-1 leading-relaxed">Distribuidor: ${brl(totalDevolvDist)}<br>Integrador: ${brl(totalDevolvInt)}</p>
+          <p class="text-xs text-gray-400 mt-1 leading-relaxed">Distribuidor: ${brl(totalDevolvDist)}<br>Integrador: ${brl(totalDevolvInt)}<br>Retido: ${brl(totalRetido)}</p>
         </div>
         <div class="bg-white rounded-xl border border-orange-200 shadow-sm p-4">
           <p class="text-xs font-semibold text-orange-400 uppercase tracking-widest mb-1">A Recuperar dos Parceiros</p>
