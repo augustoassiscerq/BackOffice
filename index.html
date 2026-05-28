@@ -2341,41 +2341,60 @@
 
     function exportarExcelCancelamentos() {
       if (!filtradosCancel.length) { alert('Nenhum registro para exportar.'); return; }
-      const linhas = filtradosCancel.map(r => ({
-        'Nº Ordem':                     r.numero_ordem||'',
-        'CCB':                          r.ccb||'',
-        'Cliente':                      r.cliente||'',
-        // CPF/CNPJ omitido — LGPD
-        'Integrador':                   r.integrador||'',
-        'Distribuidor':                 r.distribuidor||'',
-        'Data Assinatura CCB':          r.data_assinatura_ccb||'',
-        'Data Solicitação':             r.data_solicitacao||'',
-        'Dias':                         r.dias_solicitacao||'',
-        'Range':                        r.range_prazo||'',
-        'Status':                       r.status||'',
-        'Cliente Confirmou':            r.cliente_confirmou||'',
-        'Boleto Emitido':               r.boleto_emitido||'',
-        'Boleto Pago':                  r.boleto_pago||'',
-        'Data Quitação':                r.data_quitacao||'',
-        'Valor Boleto Quitação (R$)':   r.valor_boleto_quitacao||0,
-        'Devolvido Integrador':         r.devolvido_integrador||'',
-        'Devolvido Distribuidor':       r.devolvido_distribuidor||'',
-        'Status Integrador':            r.status_integrador||'',
-        'Perda':                        r.perda||'',
-        'Resultado':                    r.resultado||'',
-        'Valor Projeto (R$)':              r.valor_projeto||0,
-        'Devolvido Distribuidor (R$)':     r.valor_devolvido_distribuidor||0,
-        'Pendente Distribuidor (R$)':      r.valor_pendente_distribuidor||0,
-        'Devolvido Integrador (R$)':       r.valor_devolvido_integrador||0,
-        'Pendente Integrador (R$)':        r.valor_pendente_integrador||0,
-        'Total Já Recuperado (R$)':        (r.valor_devolvido_distribuidor||0) + (r.valor_devolvido_integrador||0),
-        'Total Pendente a Recuperar (R$)': (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0),
-        'Observação':                   r.observacao||'',
-      }));
+      const linhas = filtradosCancel.map(r => {
+        const retido     = r.valor_retido || 0;
+        const devTotal   = (r.valor_devolvido_distribuidor||0) + (r.valor_devolvido_integrador||0);
+        const bruto      = (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0);
+        const aRecuperar = Math.max(0, bruto - devTotal - retido);
+        const jaRecup    = devTotal + retido;
+        const prejuizo   = r.tipo_quitacao === 'Valor Presente' && r.valor_boleto_quitacao > 0 && r.valor_projeto > 0
+                           ? Math.max(0, r.valor_boleto_quitacao - r.valor_projeto) : 0;
+        const desconto   = r.tipo_quitacao === 'Valor do Projeto' && r.valor_presente > 0 && r.valor_boleto_quitacao > 0
+                           ? Math.max(0, r.valor_presente - r.valor_boleto_quitacao) : 0;
+        return {
+          // Identificação
+          'Nº Ordem':                        r.numero_ordem||'',
+          'CCB':                             r.ccb||'',
+          'Cliente':                         r.cliente||'',
+          'CPF/CNPJ':                        r.cpf_cnpj||'',
+          'Integrador':                      r.integrador||'',
+          'Distribuidor':                    r.distribuidor||'',
+          // Data e Prazo
+          'Data Assinatura CCB':             r.data_assinatura_ccb||'',
+          'Data Solicitação':                r.data_solicitacao||'',
+          'Dias de Solicitação':             computeDiasSolic(r),
+          'Range':                           r.range_prazo||'',
+          // Status e Rastreamento
+          'Status':                          r.status||'',
+          'Perda':                           isPerda(r) ? 'SIM' : 'NÃO',
+          'Boleto Emitido':                  r.boleto_emitido||'',
+          'Boleto Pago':                     r.boleto_pago||'',
+          'Data Quitação':                   r.data_quitacao||'',
+          // Financeiro
+          'Valor Projeto (R$)':              r.valor_projeto||0,
+          'Valor Presente (R$)':             r.valor_presente||0,
+          'Valor Boleto Quitação (R$)':      r.valor_boleto_quitacao||0,
+          'Tipo Quitação':                   r.tipo_quitacao||'',
+          'Pendente Distribuidor (R$)':      r.valor_pendente_distribuidor||0,
+          'Devolvido Distribuidor (R$)':     r.valor_devolvido_distribuidor||0,
+          'Pendente Integrador (R$)':        r.valor_pendente_integrador||0,
+          'Devolvido Integrador (R$)':       r.valor_devolvido_integrador||0,
+          'Total Já Recuperado (R$)':        jaRecup,
+          'A Recuperar dos Parceiros (R$)':  aRecuperar,
+          'Prejuízo Financeiro (R$)':        prejuizo,
+          'Desconto Concedido (R$)':         desconto,
+          // N2 — Retenção
+          'Chamado Retenção':                r.chamado_retencao||'',
+          'Valor Retido (R$)':               retido,
+          'Data Última Cobrança':            r.data_ultima_cobranca||'',
+          // Observações
+          'Observação':                      r.observacao||'',
+        };
+      });
       const ws = XLSX.utils.json_to_sheet(linhas);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Cancelamentos');
-      ws['!cols'] = Object.keys(linhas[0]).map(k => ({ wch: Math.max(k.length, 12) }));
+      ws['!cols'] = Object.keys(linhas[0]).map(k => ({ wch: Math.max(k.length, 14) }));
       XLSX.writeFile(wb, `cancelamentos-${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.xlsx`);
     }
 
@@ -2399,36 +2418,53 @@
       if (!d.length) { alert('Sem dados para exportar.'); return; }
 
       const linhas = d.map(r => {
-        const devTotal  = (r.valor_devolvido_distribuidor||0) + (r.valor_devolvido_integrador||0);
-        const bruto     = (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0);
-        const retido    = r.valor_retido || 0;
+        const retido     = r.valor_retido || 0;
+        const devTotal   = (r.valor_devolvido_distribuidor||0) + (r.valor_devolvido_integrador||0);
+        const bruto      = (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0);
         const aRecuperar = Math.max(0, bruto - devTotal - retido);
-        // Prejuízo = tipo "Valor Presente": MAX(0, Boleto − Projeto)
-        // Desconto = tipo "Valor do Projeto": MAX(0, VP − Boleto)
-        const perdaFin  = r.tipo_quitacao === 'Valor Presente' && r.valor_boleto_quitacao > 0 && r.valor_projeto > 0
-                          ? Math.max(0, r.valor_boleto_quitacao - r.valor_projeto) : 0;
+        const jaRecup    = devTotal + retido;
+        const prejuizo   = r.tipo_quitacao === 'Valor Presente' && r.valor_boleto_quitacao > 0 && r.valor_projeto > 0
+                           ? Math.max(0, r.valor_boleto_quitacao - r.valor_projeto) : 0;
+        const desconto   = r.tipo_quitacao === 'Valor do Projeto' && r.valor_presente > 0 && r.valor_boleto_quitacao > 0
+                           ? Math.max(0, r.valor_presente - r.valor_boleto_quitacao) : 0;
         return {
-          'CCB':                        r.ccb||'',
-          'Cliente':                    r.cliente||'',
-          'Integrador':                 r.integrador||'',
-          'Distribuidor':               r.distribuidor||'',
-          'Data Solicitação':           r.data_solicitacao||'',
-          'Dias':                       computeDiasSolic(r),
-          'Range':                      r.range_prazo||'',
-          'Status':                     r.status||'',
-          'Perda':                      isPerda(r) ? 'SIM' : 'NÃO',
-          'Valor Projeto (R$)':         r.valor_projeto||0,
-          'Valor Presente (R$)':        r.valor_presente||0,
-          'Valor Boleto Quitação (R$)': r.valor_boleto_quitacao||0,
-          'Tipo Quitação':              r.tipo_quitacao||'',
-          'Pend. Distribuidor (R$)':    r.valor_pendente_distribuidor||0,
-          'Dev. Distribuidor (R$)':     r.valor_devolvido_distribuidor||0,
-          'Pend. Integrador (R$)':      r.valor_pendente_integrador||0,
-          'Dev. Integrador (R$)':       r.valor_devolvido_integrador||0,
-          'Valor Retido (R$)':          retido,
-          'Total Já Recuperado (R$)':   devTotal,
-          'A Recuperar (R$)':           aRecuperar,
-          'Perda Financeira Est. (R$)': perdaFin,
+          // Identificação
+          'Nº Ordem':                        r.numero_ordem||'',
+          'CCB':                             r.ccb||'',
+          'Cliente':                         r.cliente||'',
+          'CPF/CNPJ':                        r.cpf_cnpj||'',
+          'Integrador':                      r.integrador||'',
+          'Distribuidor':                    r.distribuidor||'',
+          // Data e Prazo
+          'Data Assinatura CCB':             r.data_assinatura_ccb||'',
+          'Data Solicitação':                r.data_solicitacao||'',
+          'Dias de Solicitação':             computeDiasSolic(r),
+          'Range':                           r.range_prazo||'',
+          // Status e Rastreamento
+          'Status':                          r.status||'',
+          'Perda':                           isPerda(r) ? 'SIM' : 'NÃO',
+          'Boleto Emitido':                  r.boleto_emitido||'',
+          'Boleto Pago':                     r.boleto_pago||'',
+          'Data Quitação':                   r.data_quitacao||'',
+          // Financeiro
+          'Valor Projeto (R$)':              r.valor_projeto||0,
+          'Valor Presente (R$)':             r.valor_presente||0,
+          'Valor Boleto Quitação (R$)':      r.valor_boleto_quitacao||0,
+          'Tipo Quitação':                   r.tipo_quitacao||'',
+          'Pendente Distribuidor (R$)':      r.valor_pendente_distribuidor||0,
+          'Devolvido Distribuidor (R$)':     r.valor_devolvido_distribuidor||0,
+          'Pendente Integrador (R$)':        r.valor_pendente_integrador||0,
+          'Devolvido Integrador (R$)':       r.valor_devolvido_integrador||0,
+          'Total Já Recuperado (R$)':        jaRecup,
+          'A Recuperar dos Parceiros (R$)':  aRecuperar,
+          'Prejuízo Financeiro (R$)':        prejuizo,
+          'Desconto Concedido (R$)':         desconto,
+          // N2 — Retenção
+          'Chamado Retenção':                r.chamado_retencao||'',
+          'Valor Retido (R$)':               retido,
+          'Data Última Cobrança':            r.data_ultima_cobranca||'',
+          // Observações
+          'Observação':                      r.observacao||'',
         };
       });
 
