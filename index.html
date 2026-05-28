@@ -909,10 +909,9 @@
                 <select id="mc-cliente_confirmou" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                   <option value="">—</option><option>Sim</option><option>Não</option>
                 </select></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Perda</label>
-                <select id="mc-perda" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                  <option value="">—</option><option>SIM</option><option>NÃO</option>
-                </select></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Perda (auto)</label>
+                <div id="mc-perda-display" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 font-semibold text-gray-500">—</div>
+                <input type="hidden" id="mc-perda" value=""></div>
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Boleto Emitido?</label>
                 <select id="mc-boleto_emitido" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                   <option value="">—</option><option>Sim</option><option>Não</option>
@@ -946,23 +945,22 @@
           <!-- Financeiro -->
           <div>
             <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Financeiro</p>
-            <div class="grid grid-cols-3 gap-3">
+            <div class="grid grid-cols-4 gap-3">
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor do Projeto (R$)</label>
                 <input id="mc-valor_projeto" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
                   oninput="maskBRL(this); calcFaltaRecuperar()" onpaste="pasteBRL(event,this)"></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Boleto de Quitação — VP (R$)</label>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Presente (R$)</label>
+                <input id="mc-valor_presente" type="text" placeholder="0,00"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  oninput="maskBRL(this); calcFaltaRecuperar()" onpaste="pasteBRL(event,this)"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Valor Boleto de Quitação (R$)</label>
                 <input id="mc-valor_boleto_quitacao" type="text" placeholder="0,00"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-green-500"
                   oninput="maskBRL(this); calcFaltaRecuperar()" onpaste="pasteBRL(event,this)"></div>
-              <div><label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Quitação</label>
-                <select id="mc-tipo_quitacao"
-                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  onchange="calcFaltaRecuperar()">
-                  <option value="">Não definido</option>
-                  <option value="Valor Presente">Valor Presente (juros)</option>
-                  <option value="Valor do Projeto">Valor do Projeto (desconto)</option>
-                </select></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Tipo de Quitação (auto)</label>
+                <div id="mc-tipo_quitacao-display" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 font-medium text-gray-600">—</div>
+                <input type="hidden" id="mc-tipo_quitacao" value=""></div>
             </div>
             <!-- Parceiros: pendente vs. devolvido -->
             <div class="mt-3 grid grid-cols-4 gap-3">
@@ -987,11 +985,29 @@
             <div class="mt-3 grid grid-cols-2 gap-3">
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Total Pendente a Recuperar (R$)</label>
                 <input id="mc-valor_falta_recuperar" type="text" placeholder="—" readonly
-                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm input-brl bg-gray-50 font-semibold cursor-default"></div>
+                  class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm input-brl bg-gray-50 font-semibold cursor-default"
+                  title="(Pend.Dist + Pend.Int) - (Dev.Dist + Dev.Int) - Valor Retido"></div>
               <div><label class="block text-xs font-medium text-gray-600 mb-1">Perda Financeira Estimada (R$)</label>
                 <input id="mc-perda-financeira" type="text" placeholder="—" readonly
                   class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm input-brl bg-gray-50 font-semibold cursor-default"
-                  title="benchmark (VP ou projeto) − já devolvido pelos parceiros"></div>
+                  title="MAX(0, Valor Presente - Valor Boleto Quitação)"></div>
+            </div>
+          </div>
+
+          <!-- N2 -->
+          <div>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">N2 — Retenção Integrador</p>
+            <div class="grid grid-cols-3 gap-3">
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Chamado para Retenção (Nº)</label>
+                <input id="mc-chamado_retencao" type="text" placeholder="Nº do chamado"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
+              <div><label class="block text-xs font-medium text-purple-600 mb-1">💰 Valor Retido (R$)</label>
+                <input id="mc-valor_retido" type="text" placeholder="0,00"
+                  class="w-full border border-purple-300 rounded-lg px-3 py-2 text-sm input-brl focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  oninput="maskBRL(this); calcFaltaRecuperar()" onpaste="pasteBRL(event,this)"></div>
+              <div><label class="block text-xs font-medium text-gray-600 mb-1">Data da Última Cobrança</label>
+                <input id="mc-data_ultima_cobranca" type="date"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></div>
             </div>
           </div>
 
@@ -1832,21 +1848,16 @@
           || int.includes('R C VIEGAS')      || dist.includes('R C VIEGAS');
     }
 
-    // Regra de negócio: perda = marcado como SIM
-    //   Sai da perda quando o devolvido pelos parceiros cobre o benchmark:
-    //   - tipo = "Valor Presente" → benchmark = valor_boleto_quitacao (VP)
-    //   - tipo = "Valor do Projeto" ou não definido → benchmark = valor_projeto
+    // Perda: calculada ao vivo — dias > 120 desde a solicitação E não recuperado
+    function computeDiasSolic(r) {
+      if (r.data_solicitacao) {
+        return Math.floor((Date.now() - new Date(r.data_solicitacao + 'T00:00:00').getTime()) / 86400000);
+      }
+      return r.dias_solicitacao || 0;
+    }
     function isPerda(r) {
-      if ((r.perda || '').toUpperCase() !== 'SIM') return false;
-      const vp        = r.valor_projeto        || 0;
-      const vBoleto   = r.valor_boleto_quitacao || 0;
-      const devTotal  = (r.valor_devolvido_distribuidor || 0)
-                      + (r.valor_devolvido_integrador   || 0);
-      const benchmark = (r.tipo_quitacao === 'Valor Presente' && vBoleto > 0)
-                      ? vBoleto : vp;
-      // Sai da perda quando o devolvido cobre o benchmark
-      if (benchmark > 0 && devTotal >= benchmark) return false;
-      return true;
+      const isRecuperado = (r.status || '').toLowerCase().includes('recuperado');
+      return computeDiasSolic(r) > 120 && !isRecuperado;
     }
 
     function switchAbaCancel(aba) {
@@ -2043,32 +2054,51 @@
 
     // ── Modal Cancelamento ────────────────────────────────────────
     function calcFaltaRecuperar() {
-      const fmt     = v => Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
-      const g       = id => parseBRL(document.getElementById(id)?.value) || 0;
-      const pendDist = g('mc-valor_pendente_distribuidor');
-      const pendInt  = g('mc-valor_pendente_integrador');
-      const devDist  = g('mc-valor_devolvido_distribuidor');
-      const devInt   = g('mc-valor_devolvido_integrador');
-      const vp       = g('mc-valor_projeto');
-      const vBoleto  = g('mc-valor_boleto_quitacao');
-      const tipo     = document.getElementById('mc-tipo_quitacao')?.value || '';
+      const fmt = v => Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      const g   = id => parseBRL(document.getElementById(id)?.value) || 0;
 
-      // Total ainda a recuperar = pendente − devolvido (o que ainda falta receber)
-      const falta = Math.max(0, pendDist - devDist) + Math.max(0, pendInt - devInt);
+      const pendDist  = g('mc-valor_pendente_distribuidor');
+      const pendInt   = g('mc-valor_pendente_integrador');
+      const devDist   = g('mc-valor_devolvido_distribuidor');
+      const devInt    = g('mc-valor_devolvido_integrador');
+      const retido    = g('mc-valor_retido');
+      const vProjeto  = g('mc-valor_projeto');
+      const vPresente = g('mc-valor_presente');
+      const vBoleto   = g('mc-valor_boleto_quitacao');
+
+      // ── Tipo de Quitação auto ──────────────────────────────────────
+      // Boleto >= VP → "Valor Presente"; Boleto < VP → "Valor do Projeto"
+      let tipoAuto = '';
+      if (vBoleto > 0 && vPresente > 0) {
+        tipoAuto = vBoleto >= vPresente ? 'Valor Presente' : 'Valor do Projeto';
+      } else if (vBoleto > 0 && vProjeto > 0) {
+        tipoAuto = vBoleto >= vProjeto ? 'Valor Presente' : 'Valor do Projeto';
+      }
+      const tipoEl = document.getElementById('mc-tipo_quitacao');
+      if (tipoEl) tipoEl.value = tipoAuto;
+      const tipoDisp = document.getElementById('mc-tipo_quitacao-display');
+      if (tipoDisp) tipoDisp.textContent = tipoAuto || '—';
+
+      // ── Total Pendente a Recuperar ─────────────────────────────────
+      // = (Pend.Dist + Pend.Int) - (Dev.Dist + Dev.Int) - Valor Retido
+      const falta = Math.max(0, (pendDist + pendInt) - (devDist + devInt) - retido);
       const elFalta = document.getElementById('mc-valor_falta_recuperar');
-      elFalta.value = falta > 0 ? fmt(falta) : (pendDist + pendInt > 0 ? 'R$ 0,00 ✅' : '');
-      elFalta.classList.toggle('text-red-600',   falta > 0);
-      elFalta.classList.toggle('text-green-700', falta === 0 && (pendDist + pendInt) > 0);
+      if (elFalta) {
+        elFalta.value = falta > 0 ? fmt(falta) : ((pendDist + pendInt) > 0 ? 'R$ 0,00 ✅' : '');
+        elFalta.classList.toggle('text-red-600',   falta > 0);
+        elFalta.classList.toggle('text-green-700', falta === 0 && (pendDist + pendInt) > 0);
+      }
 
-      // Perda financeira estimada:
-      // benchmark = VP (boleto) se tipo=Valor Presente, senão = valor_projeto
-      const benchmark = (tipo === 'Valor Presente' && vBoleto > 0) ? vBoleto : vp;
-      const devolvido = devDist + devInt;
-      const perdaFin  = benchmark > 0 ? Math.max(0, benchmark - devolvido) : 0;
-      const elPerda   = document.getElementById('mc-perda-financeira');
-      elPerda.value   = perdaFin > 0 ? fmt(perdaFin) : (benchmark > 0 && devolvido >= benchmark ? 'R$ 0,00 ✅' : '');
-      elPerda.classList.toggle('text-red-600',   perdaFin > 0);
-      elPerda.classList.toggle('text-green-700', perdaFin === 0 && benchmark > 0);
+      // ── Perda Financeira Estimada ──────────────────────────────────
+      // = MAX(0, Valor Presente - Valor Boleto Quitação)
+      // (desconto que a empresa assumiu ao quitar abaixo do VP)
+      const perdaFin = vPresente > 0 && vBoleto > 0 ? Math.max(0, vPresente - vBoleto) : 0;
+      const elPerda  = document.getElementById('mc-perda-financeira');
+      if (elPerda) {
+        elPerda.value = perdaFin > 0 ? fmt(perdaFin) : (vPresente > 0 && vBoleto >= vPresente ? 'R$ 0,00 ✅' : '');
+        elPerda.classList.toggle('text-red-600',   perdaFin > 0);
+        elPerda.classList.toggle('text-green-700', perdaFin === 0 && vPresente > 0 && vBoleto > 0);
+      }
     }
 
     function abrirModalCancel(id) {
@@ -2107,13 +2137,16 @@
       set('mc-status_integrador', r.status_integrador);
       set('mc-perda', r.perda);                   set('mc-resultado', r.resultado);
       set('mc-observacao', r.observacao);
-      set('mc-tipo_quitacao', r.tipo_quitacao||'');
       set('mc-valor_projeto',                fmtBrl(r.valor_projeto));
+      set('mc-valor_presente',               fmtBrl(r.valor_presente));
       set('mc-valor_boleto_quitacao',        fmtBrl(r.valor_boleto_quitacao));
       set('mc-valor_pendente_distribuidor',  fmtBrl(r.valor_pendente_distribuidor));
       set('mc-valor_devolvido_distribuidor', fmtBrl(r.valor_devolvido_distribuidor));
       set('mc-valor_pendente_integrador',    fmtBrl(r.valor_pendente_integrador));
       set('mc-valor_devolvido_integrador',   fmtBrl(r.valor_devolvido_integrador));
+      set('mc-chamado_retencao',             r.chamado_retencao||'');
+      set('mc-valor_retido',                 fmtBrl(r.valor_retido));
+      set('mc-data_ultima_cobranca',         r.data_ultima_cobranca||'');
       calcFaltaRecuperar();
       // Comprovantes
       const linkInt  = document.getElementById('mc-link-integrador');
@@ -2144,18 +2177,20 @@
       if (dataSolic) {
         const dias = Math.floor((new Date() - new Date(dataSolic + 'T00:00:00')) / 86400000);
         document.getElementById('mc-dias_solicitacao').value = dias;
-      }
-      // Range: calculado pela data de assinatura da CCB
-      const dataCCB = document.getElementById('mc-data_assinatura_ccb').value;
-      if (dataCCB) {
-        const d = Math.floor((new Date() - new Date(dataCCB + 'T00:00:00')) / 86400000);
+        // Range baseado em dias desde a solicitação
         document.getElementById('mc-range_prazo').value =
-          d <= 29  ? 'Range 01 - 29'
-        : d <= 59  ? 'Range 30 - 59'
-        : d <= 89  ? 'Range 60 - 89'
-        : d <= 119 ? 'Range 90 - 119'
-        : d <= 199 ? 'Range 120 - 199'
-        : 'Range 200 >';
+          dias <= 30  ? '01 - 30'
+        : dias <= 60  ? '31 - 60'
+        : dias <= 90  ? '61 - 90'
+        : dias <= 120 ? '91 - 120'
+        : '120+';
+        // Atualiza display de Perda auto
+        const statusVal = document.getElementById('mc-status')?.value || '';
+        const isRecup   = statusVal.toLowerCase().includes('recuperado');
+        const perdaAuto = (dias > 120 && !isRecup) ? 'SIM' : 'NÃO';
+        document.getElementById('mc-perda').value   = perdaAuto;
+        const pd = document.getElementById('mc-perda-display');
+        if (pd) { pd.textContent = perdaAuto; pd.className = `w-full border rounded-lg px-3 py-2 text-sm font-semibold ${perdaAuto === 'SIM' ? 'border-red-300 bg-red-50 text-red-700' : 'border-green-200 bg-green-50 text-green-700'}`; }
       }
     }
 
@@ -2218,70 +2253,69 @@
       msgOk.classList.add('hidden'); msgErr.classList.add('hidden');
       try {
         const g = id => document.getElementById(id);
+        const pBRL = id => parseBRL(g(id).value) || null;
         const payload = {
-          numero_ordem:                g('mc-numero_ordem').value.trim()||null,
-          ccb:                         g('mc-ccb').value.trim()||null,
-          cliente:                     g('mc-cliente').value.trim()||null,
-          cpf_cnpj:                    g('mc-cpf_cnpj').value.trim()||null,
-          integrador:                  g('mc-integrador').value.trim()||null,
-          distribuidor:                g('mc-distribuidor').value.trim()||null,
-          data_assinatura_ccb:         g('mc-data_assinatura_ccb').value||null,
-          data_solicitacao:            g('mc-data_solicitacao').value||null,
-          dias_solicitacao:            parseInt(g('mc-dias_solicitacao').value)||null,
-          range_prazo:                 g('mc-range_prazo').value||null,
-          status:                      g('mc-status').value||null,
-          cliente_confirmou:           g('mc-cliente_confirmou').value||null,
-          boleto_emitido:              g('mc-boleto_emitido').value||null,
-          boleto_pago:                 g('mc-boleto_pago').value||null,
-          data_quitacao:               g('mc-data_quitacao').value||null,
-          valor_boleto_quitacao:       parseBRL(g('mc-valor_boleto_quitacao').value)||null,
-          devolvido_integrador:        g('mc-devolvido_integrador').value||null,
-          devolvido_distribuidor:      g('mc-devolvido_distribuidor').value||null,
-          status_integrador:           g('mc-status_integrador').value.trim()||null,
-          resultado:                   g('mc-resultado').value||null,
-          valor_projeto:                parseBRL(g('mc-valor_projeto').value)||null,
-          valor_pendente_distribuidor:  parseBRL(g('mc-valor_pendente_distribuidor').value)||null,
-          valor_devolvido_distribuidor: parseBRL(g('mc-valor_devolvido_distribuidor').value)||null,
-          valor_pendente_integrador:    parseBRL(g('mc-valor_pendente_integrador').value)||null,
-          valor_devolvido_integrador:   parseBRL(g('mc-valor_devolvido_integrador').value)||null,
+          numero_ordem:                 g('mc-numero_ordem').value.trim()||null,
+          ccb:                          g('mc-ccb').value.trim()||null,
+          cliente:                      g('mc-cliente').value.trim()||null,
+          cpf_cnpj:                     g('mc-cpf_cnpj').value.trim()||null,
+          integrador:                   g('mc-integrador').value.trim()||null,
+          distribuidor:                 g('mc-distribuidor').value.trim()||null,
+          data_assinatura_ccb:          g('mc-data_assinatura_ccb').value||null,
+          data_solicitacao:             g('mc-data_solicitacao').value||null,
+          dias_solicitacao:             parseInt(g('mc-dias_solicitacao').value)||null,
+          range_prazo:                  g('mc-range_prazo').value||null,
+          status:                       g('mc-status').value||null,
+          cliente_confirmou:            g('mc-cliente_confirmou').value||null,
+          boleto_emitido:               g('mc-boleto_emitido').value||null,
+          boleto_pago:                  g('mc-boleto_pago').value||null,
+          data_quitacao:                g('mc-data_quitacao').value||null,
+          devolvido_integrador:         g('mc-devolvido_integrador').value||null,
+          devolvido_distribuidor:       g('mc-devolvido_distribuidor').value||null,
+          status_integrador:            g('mc-status_integrador').value.trim()||null,
+          resultado:                    g('mc-resultado').value||null,
+          valor_projeto:                pBRL('mc-valor_projeto'),
+          valor_presente:               pBRL('mc-valor_presente'),
+          valor_boleto_quitacao:        pBRL('mc-valor_boleto_quitacao'),
+          valor_pendente_distribuidor:  pBRL('mc-valor_pendente_distribuidor'),
+          valor_devolvido_distribuidor: pBRL('mc-valor_devolvido_distribuidor'),
+          valor_pendente_integrador:    pBRL('mc-valor_pendente_integrador'),
+          valor_devolvido_integrador:   pBRL('mc-valor_devolvido_integrador'),
+          valor_retido:                 pBRL('mc-valor_retido'),
+          chamado_retencao:             g('mc-chamado_retencao').value.trim()||null,
+          data_ultima_cobranca:         g('mc-data_ultima_cobranca').value||null,
           observacao:                   g('mc-observacao').value.trim()||null,
-          tipo_quitacao:                g('mc-tipo_quitacao').value||null,
           updated_at:                   new Date().toISOString()
         };
 
+        // ── Tipo de Quitação auto ──────────────────────────────────────
+        const _vBoleto   = payload.valor_boleto_quitacao || 0;
+        const _vPresente = payload.valor_presente        || 0;
+        const _vProjeto  = payload.valor_projeto         || 0;
+        if (_vBoleto > 0) {
+          const _ref = _vPresente > 0 ? _vPresente : _vProjeto;
+          payload.tipo_quitacao = _vBoleto >= _ref ? 'Valor Presente' : 'Valor do Projeto';
+        } else {
+          payload.tipo_quitacao = null;
+        }
+
         // ── Auto-status: se devolvido cobre o pendente → Recuperado Valor Total ──
-        // pendente_* = total que o parceiro devia devolver (não alterado automaticamente)
-        // devolvido_* = o que o parceiro já devolveu (cresce com o tempo)
-        // "A RECUPERAR" = MAX(0, pendente - devolvido) por parceiro
         const _devDist   = payload.valor_devolvido_distribuidor  || 0;
         const _devInt    = payload.valor_devolvido_integrador    || 0;
         const _pendDist  = payload.valor_pendente_distribuidor   || 0;
         const _pendInt   = payload.valor_pendente_integrador     || 0;
         const _pendTotal = _pendDist + _pendInt;
         const _devTotal  = _devDist  + _devInt;
-        // Só dispara auto-status se há pendente definido E devolvido já cobriu tudo
         if (_pendTotal > 0 && _devTotal >= _pendTotal) {
           payload.status = 'Recuperado Valor Total';
           const statusSel = g('mc-status');
           if (statusSel) statusSel.value = 'Recuperado Valor Total';
         }
 
-        // ── Auto-calcular PERDA com base nos valores atuais ──────────
-        const _vp           = payload.valor_projeto               || 0;
-        const _vBoleto      = payload.valor_boleto_quitacao       || 0;
-        // benchmark: VP (boleto) se tipo=Valor Presente, senão valor do projeto
-        const _benchmark    = (payload.tipo_quitacao === 'Valor Presente' && _vBoleto > 0)
-                            ? _vBoleto : _vp;
-        const _dias         = payload.dias_solicitacao || 0;
-        if ((payload.status || '').includes('Recuperado Valor Total')) {
-          payload.perda = 'NÃO';
-        } else if (_benchmark > 0 && _devTotal >= _benchmark) {
-          payload.perda = 'NÃO'; // recuperado ≥ benchmark → sem perda
-        } else if (_dias > 121 && _pendTotal > 0) {
-          payload.perda = 'SIM'; // +121 dias e ainda há pendente
-        } else {
-          payload.perda = g('mc-perda').value || null;
-        }
+        // ── Perda: Range=120+ e não recuperado → SIM; senão NÃO ──────
+        const _dias        = payload.dias_solicitacao || 0;
+        const _isRecuperado = (payload.status || '').toLowerCase().includes('recuperado');
+        payload.perda = (_dias > 120 && !_isRecuperado) ? 'SIM' : 'NÃO';
 
         // 1. Salvar/inserir o registro e obter o ID
         let savedId = editandoCancelId;
@@ -2387,28 +2421,33 @@
       if (!d.length) { alert('Sem dados para exportar.'); return; }
 
       const linhas = d.map(r => {
-        const bench   = (r.tipo_quitacao === 'Valor Presente' && (r.valor_boleto_quitacao||0) > 0)
-                        ? r.valor_boleto_quitacao : (r.valor_projeto||0);
-        const devTotal = (r.valor_devolvido_distribuidor||0) + (r.valor_devolvido_integrador||0);
-        const perdaFin = bench > 0 ? Math.max(0, bench - devTotal) : 0;
+        const devTotal  = (r.valor_devolvido_distribuidor||0) + (r.valor_devolvido_integrador||0);
+        const bruto     = (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0);
+        const retido    = r.valor_retido || 0;
+        const aRecuperar = Math.max(0, bruto - devTotal - retido);
+        const perdaFin  = r.valor_presente > 0 && r.valor_boleto_quitacao > 0
+                          ? Math.max(0, r.valor_presente - r.valor_boleto_quitacao) : 0;
         return {
           'CCB':                        r.ccb||'',
           'Cliente':                    r.cliente||'',
           'Integrador':                 r.integrador||'',
           'Distribuidor':               r.distribuidor||'',
           'Data Solicitação':           r.data_solicitacao||'',
-          'Dias':                       r.dias_solicitacao||0,
+          'Dias':                       computeDiasSolic(r),
           'Range':                      r.range_prazo||'',
           'Status':                     r.status||'',
-          'Perda':                      r.perda||'',
+          'Perda':                      isPerda(r) ? 'SIM' : 'NÃO',
           'Valor Projeto (R$)':         r.valor_projeto||0,
-          'Valor Boleto VP (R$)':       r.valor_boleto_quitacao||0,
+          'Valor Presente (R$)':        r.valor_presente||0,
+          'Valor Boleto Quitação (R$)': r.valor_boleto_quitacao||0,
           'Tipo Quitação':              r.tipo_quitacao||'',
           'Pend. Distribuidor (R$)':    r.valor_pendente_distribuidor||0,
           'Dev. Distribuidor (R$)':     r.valor_devolvido_distribuidor||0,
           'Pend. Integrador (R$)':      r.valor_pendente_integrador||0,
           'Dev. Integrador (R$)':       r.valor_devolvido_integrador||0,
+          'Valor Retido (R$)':          retido,
           'Total Já Recuperado (R$)':   devTotal,
+          'A Recuperar (R$)':           aRecuperar,
           'Perda Financeira Est. (R$)': perdaFin,
         };
       });
@@ -2541,41 +2580,33 @@
           <p class="text-xs text-gray-400 mt-1">${taxaEnc}% já encerrados</p>
         </div>`;
 
-      // ── KPIs linha 2: financeiro
-      // devolvido_* = o que o parceiro JÁ devolveu
-      // pendente_*  = o que o parceiro AINDA deve devolver
-      const totalBoletos      = d.reduce((s, r) => s + (r.valor_boleto_quitacao          || 0), 0);
-      const totalDevolvDist   = d.reduce((s, r) => s + (r.valor_devolvido_distribuidor   || 0), 0);
-      const totalDevolvInt    = d.reduce((s, r) => s + (r.valor_devolvido_integrador      || 0), 0);
-      const totalJaRecup      = totalDevolvDist + totalDevolvInt;
-      const totalPendenteDist = d.reduce((s, r) => s + (r.valor_pendente_distribuidor    || 0), 0);
-      const totalPendenteInt  = d.reduce((s, r) => s + (r.valor_pendente_integrador       || 0), 0);
-      // "A Recuperar" = pendente − devolvido (o que AINDA FALTA receber de volta)
-      const totalARecuperar   = d.reduce((s, r) => {
-        const restDist = Math.max(0, (r.valor_pendente_distribuidor||0) - (r.valor_devolvido_distribuidor||0));
-        const restInt  = Math.max(0, (r.valor_pendente_integrador  ||0) - (r.valor_devolvido_integrador  ||0));
-        return s + restDist + restInt;
+      // ── KPIs linha 2: financeiro ─────────────────────────────────
+      // Já Recuperado = soma de tudo que os parceiros JÁ devolveram
+      const totalDevolvDist = d.reduce((s, r) => s + (r.valor_devolvido_distribuidor || 0), 0);
+      const totalDevolvInt  = d.reduce((s, r) => s + (r.valor_devolvido_integrador   || 0), 0);
+      const totalJaRecup    = totalDevolvDist + totalDevolvInt;
+      // A Recuperar = (pend_dist + pend_int) - (dev_dist + dev_int) - valor_retido
+      const totalARecuperar = d.reduce((s, r) => {
+        const bruto   = (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0);
+        const devolvido = (r.valor_devolvido_distribuidor||0) + (r.valor_devolvido_integrador||0);
+        const retido  = r.valor_retido || 0;
+        return s + Math.max(0, bruto - devolvido - retido);
       }, 0);
-      // Perda financeira = benchmark − devolvido (por caso, só onde há perda)
-      const totalPerdaFin     = d.reduce((s, r) => {
-        const vp      = r.valor_projeto        || 0;
-        const vBoleto = r.valor_boleto_quitacao || 0;
-        const bench   = (r.tipo_quitacao === 'Valor Presente' && vBoleto > 0) ? vBoleto : vp;
-        const dev     = (r.valor_devolvido_distribuidor || 0) + (r.valor_devolvido_integrador || 0);
-        const perd    = bench > 0 ? Math.max(0, bench - dev) : 0;
-        return s + perd;
+      // Perda Financeira Total = SUM(MAX(0, Valor Presente - Valor Boleto))
+      // (desconto que a empresa assumiu ao quitar abaixo do VP)
+      const totalPerdaFin = d.reduce((s, r) => {
+        const vp  = r.valor_presente || 0;
+        const vb  = r.valor_boleto_quitacao || 0;
+        return s + (vp > 0 && vb > 0 ? Math.max(0, vp - vb) : 0);
       }, 0);
-      // Juros pagos = boleto − projeto (quando boleto > projeto = Valor Presente)
-      const prejuizoTotal     = d.filter(r => r.boleto_emitido === 'Sim' && r.valor_boleto_quitacao > 0)
-        .reduce((s, r) => { const d2 = (r.valor_boleto_quitacao||0) - (r.valor_projeto||0); return s + (d2 > 0 ? d2 : 0); }, 0);
-      const descontoTotal     = d.filter(r => r.boleto_emitido === 'Sim' && r.valor_boleto_quitacao > 0)
-        .reduce((s, r) => { const d2 = (r.valor_projeto||0) - (r.valor_boleto_quitacao||0); return s + (d2 > 0 ? d2 : 0); }, 0);
+      // Desconto Total Concedido = mesma fórmula filtrada por tipo="Valor do Projeto"
+      const totalDesconto = d.reduce((s, r) => {
+        if (r.tipo_quitacao !== 'Valor do Projeto') return s;
+        const vp = r.valor_presente || 0;
+        const vb = r.valor_boleto_quitacao || 0;
+        return s + (vp > 0 && vb > 0 ? Math.max(0, vp - vb) : 0);
+      }, 0);
       document.getElementById('analise-kpis2').innerHTML = `
-        <div class="bg-white rounded-xl border border-blue-200 shadow-sm p-4">
-          <p class="text-xs font-semibold text-blue-400 uppercase tracking-widest mb-1">Total Boletos Pagos (VP)</p>
-          <p class="text-xl font-bold text-blue-600">${brl(totalBoletos)}</p>
-          <p class="text-xs text-gray-400 mt-1">custo total de quitação pela Sol Agora</p>
-        </div>
         <div class="bg-white rounded-xl border border-green-200 shadow-sm p-4">
           <p class="text-xs font-semibold text-green-400 uppercase tracking-widest mb-1">Já Recuperado dos Parceiros</p>
           <p class="text-xl font-bold text-green-600">${brl(totalJaRecup)}</p>
@@ -2584,15 +2615,17 @@
         <div class="bg-white rounded-xl border border-orange-200 shadow-sm p-4">
           <p class="text-xs font-semibold text-orange-400 uppercase tracking-widest mb-1">A Recuperar dos Parceiros</p>
           <p class="text-xl font-bold text-orange-600">${brl(totalARecuperar)}</p>
-          <p class="text-xs text-gray-400 mt-1 leading-relaxed">Distribuidor: ${brl(totalPendenteDist)}<br>Integrador: ${brl(totalPendenteInt)}</p>
+          <p class="text-xs text-gray-400 mt-1">(Pendente − Devolvido − Retido)</p>
         </div>
         <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
-          <p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Perda Financeira Estimada</p>
+          <p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Perda Financeira Total</p>
           <p class="text-xl font-bold text-red-600">${brl(totalPerdaFin)}</p>
-          <p class="text-xs text-gray-400 mt-1 leading-relaxed">
-            🔴 Juros pagos (VP): ${brl(prejuizoTotal)}<br>
-            🟢 Desconto obtido: <span class="text-green-600">${brl(descontoTotal)}</span>
-          </p>
+          <p class="text-xs text-gray-400 mt-1">MAX(0, Valor Presente − Boleto)</p>
+        </div>
+        <div class="bg-white rounded-xl border border-purple-200 shadow-sm p-4">
+          <p class="text-xs font-semibold text-purple-400 uppercase tracking-widest mb-1">Desconto Total Concedido</p>
+          <p class="text-xl font-bold text-purple-600">${brl(totalDesconto)}</p>
+          <p class="text-xs text-gray-400 mt-1">Quitações abaixo do Valor Presente</p>
         </div>`;
 
       // ── Range
@@ -2788,11 +2821,13 @@
       </tr>`;
 
       // ── COBRANÇA: casos com saldo pendente a recuperar dos parceiros
-      // Cobrança = casos com saldo ainda a receber (pendente − devolvido > 0)
+      // Cobrança = Total Pendente a Recuperar > 0
+      // = (pend_dist + pend_int) - (dev_dist + dev_int) - valor_retido > 0
       const cobCasos = d.filter(r => {
-        const restDist = Math.max(0, (r.valor_pendente_distribuidor||0) - (r.valor_devolvido_distribuidor||0));
-        const restInt  = Math.max(0, (r.valor_pendente_integrador  ||0) - (r.valor_devolvido_integrador  ||0));
-        return (restDist + restInt) > 0 && r.status !== 'Recuperado Valor Total';
+        const bruto   = (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0);
+        const devolvido = (r.valor_devolvido_distribuidor||0) + (r.valor_devolvido_integrador||0);
+        const retido  = r.valor_retido || 0;
+        return Math.max(0, bruto - devolvido - retido) > 0 && !isPerda(r);
       }).sort((a,b) => {
         const pa = (a.valor_pendente_distribuidor||0) + (a.valor_pendente_integrador||0);
         const pb = (b.valor_pendente_distribuidor||0) + (b.valor_pendente_integrador||0);
@@ -2820,7 +2855,12 @@
               </td>
             </tr>`;
           }).join('');
-      const totalCobPendente = cobCasos.reduce((s,r) => s + (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0), 0);
+      const totalCobPendente = cobCasos.reduce((s, r) => {
+        const bruto = (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0);
+        const devolvido = (r.valor_devolvido_distribuidor||0) + (r.valor_devolvido_integrador||0);
+        const retido = r.valor_retido || 0;
+        return s + Math.max(0, bruto - devolvido - retido);
+      }, 0);
       document.getElementById('analise-cobranca-count').textContent = `${cobCasos.length} caso${cobCasos.length !== 1 ? 's' : ''} — Total pendente: ${brl(totalCobPendente)}`;
 
       // ── TEMPO PENDENTE: dias médios por integrador / distribuidor (casos em aberto)
