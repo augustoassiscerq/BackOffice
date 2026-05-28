@@ -1941,8 +1941,9 @@
         const stCls    = getStatusClsCancel(r.status);
         const rgCls    = getRangeClsCancel(r.range_prazo);
         const perdaCls = isPerda(r) ? 'badge-pendenciar' : 'bg-gray-100 text-gray-500';
-        const diasCls  = (r.dias_solicitacao||0) > 90 ? 'text-red-600 font-bold'
-                       : (r.dias_solicitacao||0) > 30 ? 'text-orange-500 font-semibold'
+        const _diasLive = computeDiasSolic(r);
+        const diasCls  = _diasLive > 90 ? 'text-red-600 font-bold'
+                       : _diasLive > 30 ? 'text-orange-500 font-semibold'
                        : 'text-gray-600';
         const dt = r.data_solicitacao
           ? new Date(r.data_solicitacao + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
@@ -1953,7 +1954,7 @@
           <td class="px-3 py-2.5 text-xs text-gray-600">${esc(r.integrador||'—')}</td>
           <td class="px-3 py-2.5 text-xs text-gray-600">${esc(r.distribuidor||'—')}</td>
           <td class="px-3 py-2.5 text-xs text-gray-400 whitespace-nowrap">${dt}</td>
-          <td class="px-3 py-2.5 text-center text-sm whitespace-nowrap ${diasCls}">${r.dias_solicitacao??'—'}</td>
+          <td class="px-3 py-2.5 text-center text-sm whitespace-nowrap ${diasCls}">${_diasLive??'—'}</td>
           <td class="px-3 py-2.5 text-center whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${rgCls}">${esc(r.range_prazo||'—')}</span></td>
           <td class="px-3 py-2.5"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${stCls}">${esc(r.status||'—')}</span></td>
           <td class="px-3 py-2.5 text-center whitespace-nowrap"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${perdaCls}">${esc(r.perda||'—')}</span></td>
@@ -2106,8 +2107,8 @@
       set('mc-integrador', r.integrador);         set('mc-distribuidor', r.distribuidor);
       set('mc-data_assinatura_ccb', r.data_assinatura_ccb||'');
       set('mc-data_solicitacao', r.data_solicitacao||'');
-      set('mc-dias_solicitacao', r.dias_solicitacao??'');
-      set('mc-range_prazo', r.range_prazo);       set('mc-status', r.status);
+      calcularDiasRangeCancel();
+      set('mc-status', r.status);
       set('mc-boleto_emitido', r.boleto_emitido); set('mc-boleto_pago', r.boleto_pago);
       set('mc-data_quitacao', r.data_quitacao||'');
       set('mc-observacao', r.observacao);
