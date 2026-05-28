@@ -3365,26 +3365,28 @@ Equipe Sol Agora — Backoffice`;
       if (!oc) return;
       if (!confirm(`Excluir a OC "${oc.numero_oc}"?\n\nOs contratos vinculados voltarão a aparecer como candidatos.`)) return;
       try {
-        // Reverter TODOS os campos que criarOC/marcarOCPaga escreveram
         const ccbs = (oc.itens || []).map(it => it.ccb).filter(Boolean);
-        if (ccbs.length) {
-          const { error: revErr } = await db.from('cancelamentos').update({
-            numero_oc:             null,
-            numero_ordem:          null,
-            boleto_emitido:        'Não',
-            boleto_pago:           'Não',
-            valor_boleto_quitacao: null,
-            updated_at:            new Date().toISOString()
-          }).in('ccb', ccbs);
-          if (revErr) throw revErr;
+
+        // 1. Reverter boleto_emitido e boleto_pago no banco (campos que bloqueiam os candidatos)
+        for (const ccb of ccbs) {
+          await db.from('cancelamentos')
+            .update({ boleto_emitido: 'Não', boleto_pago: 'Não', updated_at: new Date().toISOString() })
+            .eq('ccb', ccb);
         }
+
+        // 2. Excluir a OC
         const { error } = await db.from('ordens_compra').delete().eq('id', id);
         if (error) throw error;
+
+        // 3. Atualizar cache local imediatamente (sem aguardar reload do banco)
         cacheOCs = cacheOCs.filter(o => o.id !== id);
-        // Recarregar cancelamentos para refletir os campos revertidos
-        await carregarCancelamentos();
+        cacheCancelamentos = cacheCancelamentos.map(r =>
+          ccbs.includes(r.ccb) ? { ...r, boleto_emitido: 'Não', boleto_pago: 'Não' } : r
+        );
+
         renderizarOCs();
-      } catch (err) { alert('Erro: ' + err.message); }
+        filtrarCancelamentos();
+      } catch (err) { alert('Erro ao excluir OC: ' + (err.message || JSON.stringify(err))); }
     }
   </script>
 </body>
