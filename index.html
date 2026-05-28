@@ -597,8 +597,9 @@
               <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500">Cliente</th>
               <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500">Distribuidor</th>
               <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500">Integrador</th>
-              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500">Falta Recuperar</th>
-              <th class="text-left px-3 py-2 text-xs font-semibold text-gray-500">Cobrar de</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500">Pendente Dist.</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500">Pendente Int.</th>
+              <th class="text-right px-3 py-2 text-xs font-semibold text-gray-500">Total a Cobrar</th>
               <th class="text-center px-3 py-2 text-xs font-semibold text-gray-500">Ação</th>
             </tr>
           </thead>
@@ -2805,23 +2806,24 @@
         return pb - pa; // maior pendente primeiro
       });
       document.getElementById('analise-cobranca-body').innerHTML = cobCasos.length === 0
-        ? '<tr><td colspan="7" class="px-3 py-6 text-center text-sm text-gray-400">Nenhum caso pendente de cobrança</td></tr>'
+        ? '<tr><td colspan="8" class="px-3 py-6 text-center text-sm text-gray-400">Nenhum caso pendente de cobrança</td></tr>'
         : cobCasos.map(r => {
-            const pendenteDist = r.valor_pendente_distribuidor || 0;
-            const pendenteInt  = r.valor_pendente_integrador   || 0;
-            const pendente     = pendenteDist + pendenteInt;
-            const cobrarDist   = pendenteDist > 0;
-            const cobrarInt    = pendenteInt  > 0;
-            const quemCobrar   = [cobrarDist ? '📦 Distribuidor' : '', cobrarInt ? '👤 Integrador' : ''].filter(Boolean).join(' + ');
+            // Valores líquidos: desconta o que já foi devolvido/retido
+            const faltaDist = Math.max(0, (r.valor_pendente_distribuidor||0) - (r.valor_devolvido_distribuidor||0));
+            const faltaInt  = Math.max(0, (r.valor_pendente_integrador||0)   - (r.valor_devolvido_integrador||0) - (r.valor_retido||0));
+            const faltaTotal = faltaDist + faltaInt;
+            const distCls   = faltaDist > 0 ? 'font-semibold text-orange-600' : 'text-gray-300';
+            const intCls    = faltaInt  > 0 ? 'font-semibold text-orange-600' : 'text-gray-300';
             return `<tr class="hover:bg-orange-50 border-b border-gray-100">
               <td class="px-3 py-2 text-xs font-mono text-gray-600">${esc(r.ccb||'—')}</td>
               <td class="px-3 py-2 text-xs text-gray-700 max-w-[150px] truncate" title="${esc(r.cliente||'')}">${esc(r.cliente||'—')}</td>
               <td class="px-3 py-2 text-xs text-gray-600 truncate max-w-[120px]">${esc(r.distribuidor||'—')}</td>
               <td class="px-3 py-2 text-xs text-gray-600 truncate max-w-[120px]">${esc(r.integrador||'—')}</td>
-              <td class="px-3 py-2 text-xs text-right font-semibold text-orange-600">${brl(pendente)}</td>
-              <td class="px-3 py-2 text-xs font-medium text-red-600">${quemCobrar}</td>
+              <td class="px-3 py-2 text-xs text-right ${distCls}">${faltaDist > 0 ? brl(faltaDist) : '—'}</td>
+              <td class="px-3 py-2 text-xs text-right ${intCls}">${faltaInt  > 0 ? brl(faltaInt)  : '—'}</td>
+              <td class="px-3 py-2 text-xs text-right font-bold text-red-600">${brl(faltaTotal)}</td>
               <td class="px-3 py-2 text-center">
-                <button onclick="abrirMensagemCobranca(${JSON.stringify({ccb:r.ccb,cliente:r.cliente,distribuidor:r.distribuidor,integrador:r.integrador,falta:pendente}).replace(/"/g,'&quot;')})"
+                <button onclick="abrirMensagemCobranca(${JSON.stringify({ccb:r.ccb,cliente:r.cliente,distribuidor:r.distribuidor,integrador:r.integrador,falta:faltaTotal}).replace(/"/g,'&quot;')})"
                   class="text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-2 py-1 rounded font-medium transition-colors">✉ Mensagem</button>
               </td>
             </tr>`;
