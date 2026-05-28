@@ -2070,15 +2070,22 @@
         elFalta.classList.toggle('text-green-700', falta === 0 && (pendDist + pendInt) > 0);
       }
 
-      // ── Perda Financeira Estimada ──────────────────────────────────
-      // = MAX(0, Valor Presente - Valor Boleto Quitação)
-      // (desconto que a empresa assumiu ao quitar abaixo do VP)
-      const perdaFin = vPresente > 0 && vBoleto > 0 ? Math.max(0, vPresente - vBoleto) : 0;
+      // ── Perda Financeira Estimada (Prejuízo) ──────────────────────
+      // Ocorre quando tipo = "Valor Presente" (boleto ≥ VP):
+      //   pagamos os juros do contrato, mas só recuperamos o Valor do Projeto
+      //   Prejuízo = MAX(0, Boleto − Valor Projeto)
+      // Desconto ocorre quando tipo = "Valor do Projeto" (boleto < VP):
+      //   quitamos abaixo do VP, sem desembolso extra — vai pro centro de custo
+      //   Desconto = MAX(0, Valor Presente − Boleto)
+      let perdaFin = 0;
+      if (tipoAuto === 'Valor Presente' && vBoleto > 0 && vProjeto > 0) {
+        perdaFin = Math.max(0, vBoleto - vProjeto);
+      }
       const elPerda  = document.getElementById('mc-perda-financeira');
       if (elPerda) {
-        elPerda.value = perdaFin > 0 ? fmt(perdaFin) : (vPresente > 0 && vBoleto >= vPresente ? 'R$ 0,00 ✅' : '');
+        elPerda.value = perdaFin > 0 ? fmt(perdaFin) : (tipoAuto ? 'R$ 0,00 ✅' : '');
         elPerda.classList.toggle('text-red-600',   perdaFin > 0);
-        elPerda.classList.toggle('text-green-700', perdaFin === 0 && vPresente > 0 && vBoleto > 0);
+        elPerda.classList.toggle('text-green-700', perdaFin === 0 && !!tipoAuto);
       }
     }
 
@@ -2396,8 +2403,10 @@
         const bruto     = (r.valor_pendente_distribuidor||0) + (r.valor_pendente_integrador||0);
         const retido    = r.valor_retido || 0;
         const aRecuperar = Math.max(0, bruto - devTotal - retido);
-        const perdaFin  = r.valor_presente > 0 && r.valor_boleto_quitacao > 0
-                          ? Math.max(0, r.valor_presente - r.valor_boleto_quitacao) : 0;
+        // Prejuízo = tipo "Valor Presente": MAX(0, Boleto − Projeto)
+        // Desconto = tipo "Valor do Projeto": MAX(0, VP − Boleto)
+        const perdaFin  = r.tipo_quitacao === 'Valor Presente' && r.valor_boleto_quitacao > 0 && r.valor_projeto > 0
+                          ? Math.max(0, r.valor_boleto_quitacao - r.valor_projeto) : 0;
         return {
           'CCB':                        r.ccb||'',
           'Cliente':                    r.cliente||'',
@@ -2564,17 +2573,20 @@
         const retido  = r.valor_retido || 0;
         return s + Math.max(0, bruto - devolvido - retido);
       }, 0);
-      // Perda Financeira Total = SUM(MAX(0, Valor Presente - Valor Boleto))
-      // (desconto que a empresa assumiu ao quitar abaixo do VP)
+      // Prejuízo Financeiro = tipo "Valor Presente" (boleto ≥ VP)
+      //   pagamos os juros mas só recuperamos o projeto → MAX(0, Boleto − Projeto)
       const totalPerdaFin = d.reduce((s, r) => {
-        const vp  = r.valor_presente || 0;
+        if (r.tipo_quitacao !== 'Valor Presente') return s;
         const vb  = r.valor_boleto_quitacao || 0;
-        return s + (vp > 0 && vb > 0 ? Math.max(0, vp - vb) : 0);
+        const vpr = r.valor_projeto         || 0;
+        return s + (vb > 0 && vpr > 0 ? Math.max(0, vb - vpr) : 0);
       }, 0);
-      // Desconto Total Concedido = mesma fórmula filtrada por tipo="Valor do Projeto"
+      // Desconto Concedido = tipo "Valor do Projeto" (boleto < VP)
+      //   quitamos abaixo do VP — desconto vai pro centro de custo, sem desembolso
+      //   MAX(0, Valor Presente − Boleto)
       const totalDesconto = d.reduce((s, r) => {
         if (r.tipo_quitacao !== 'Valor do Projeto') return s;
-        const vp = r.valor_presente || 0;
+        const vp = r.valor_presente        || 0;
         const vb = r.valor_boleto_quitacao || 0;
         return s + (vp > 0 && vb > 0 ? Math.max(0, vp - vb) : 0);
       }, 0);
@@ -2590,14 +2602,14 @@
           <p class="text-xs text-gray-400 mt-1">(Pendente − Devolvido − Retido)</p>
         </div>
         <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
-          <p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Perda Financeira Total</p>
+          <p class="text-xs font-semibold text-red-400 uppercase tracking-widest mb-1">Prejuízo Financeiro</p>
           <p class="text-xl font-bold text-red-600">${brl(totalPerdaFin)}</p>
-          <p class="text-xs text-gray-400 mt-1">MAX(0, Valor Presente − Boleto)</p>
+          <p class="text-xs text-gray-400 mt-1 leading-relaxed">Quitou pelo VP mas recuperou<br>só o Projeto → Boleto − Projeto</p>
         </div>
         <div class="bg-white rounded-xl border border-purple-200 shadow-sm p-4">
-          <p class="text-xs font-semibold text-purple-400 uppercase tracking-widest mb-1">Desconto Total Concedido</p>
+          <p class="text-xs font-semibold text-purple-400 uppercase tracking-widest mb-1">Desconto Concedido</p>
           <p class="text-xl font-bold text-purple-600">${brl(totalDesconto)}</p>
-          <p class="text-xs text-gray-400 mt-1">Quitações abaixo do Valor Presente</p>
+          <p class="text-xs text-gray-400 mt-1 leading-relaxed">Boleto abaixo do VP →<br>centro de custo, sem desembolso</p>
         </div>`;
 
       // ── Range
